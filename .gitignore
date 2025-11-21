@@ -1,0 +1,35 @@
+# Xcode
+.DS_Store
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Ruby scripts (temporary build scripts)
+*.rb
+
+# Xcode workspace
+*.xcworkspace/
+
+# Build artifacts
+.build/
+build/
+
+# Swift
+*.swiftmodule
+*.swiftdoc
+*.swiftinterface
+
+# macOS
+.DS_Store

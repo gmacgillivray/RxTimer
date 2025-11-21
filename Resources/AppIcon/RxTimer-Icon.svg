@@ -1,0 +1,71 @@
+        <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" id="appIcon">
+            <!-- Background with gradient -->
+            <defs>
+                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1E3A8A;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+                </linearGradient>
+
+                <linearGradient id="timerRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#F97316;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FB923C;stop-opacity:1" />
+                </linearGradient>
+
+                <!-- Subtle texture for depth -->
+                <filter id="innerShadow">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- Rounded rectangle background -->
+            <rect width="1024" height="1024" rx="226" fill="url(#bgGradient)"/>
+
+            <!-- Timer ring (partial circle) -->
+            <circle cx="512" cy="512" r="340" fill="none"
+                    stroke="#1E3A8A" stroke-width="40" opacity="0.3"/>
+            <path d="M 512 172 A 340 340 0 1 1 267.8 267.8"
+                  fill="none"
+                  stroke="url(#timerRingGradient)"
+                  stroke-width="40"
+                  stroke-linecap="round"
+                  opacity="0.9"/>
+
+            <!-- Rx symbol -->
+            <g id="rxSymbol" filter="url(#innerShadow)">
+                <!-- R letter -->
+                <path d="M 280 380 L 280 640 M 280 380 L 380 380 Q 450 380 450 450 Q 450 510 390 520 L 280 520 M 390 520 L 470 640"
+                      stroke="#FFFFFF"
+                      stroke-width="58"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      fill="none"/>
+
+                <!-- x letter (lowercase) -->
+                <path d="M 520 480 L 660 640 M 660 480 L 520 640"
+                      stroke="#FFFFFF"
+                      stroke-width="58"
+                      stroke-linecap="round"
+                      fill="none"/>
+            </g>
+
+            <!-- Small clock accent (minimalist) -->
+            <g id="clockAccent" opacity="0.4">
+                <!-- Clock hand pointing to 12 o'clock position -->
+                <line x1="512" y1="280" x2="512" y2="230"
+                      stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+                <line x1="512" y1="280" x2="542" y2="260"
+                      stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+                <circle cx="512" cy="280" r="8" fill="#FFFFFF"/>
+            </g>
+
+            <!-- Subtle highlight for depth -->
+            <ellipse cx="512" cy="280" rx="200" ry="60" fill="#FFFFFF" opacity="0.08"/>
+        </svg>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21754" systemVersion="22F82" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Workout" representedClassName="Workout" syncable="YES" codeGenerationType="class">
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="timerType" attributeType="String"/>
+        <attribute name="totalDurationSeconds" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="wasCompleted" attributeType="Boolean" usesScalarValueType="YES"/>
+        <relationship name="configuration" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="WorkoutConfiguration" inverseName="workout" inverseEntity="WorkoutConfiguration"/>
+        <relationship name="counterEvents" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="CounterEvent" inverseName="workout" inverseEntity="CounterEvent"/>
+        <relationship name="sets" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="WorkoutSet" inverseName="workout" inverseEntity="WorkoutSet"/>
+    </entity>
+    <entity name="WorkoutConfiguration" representedClassName="WorkoutConfiguration" syncable="YES" codeGenerationType="class">
+        <attribute name="durationSeconds" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="intervalDurationSeconds" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="numIntervals" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="numSets" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="restDurationSeconds" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="timeCapSeconds" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="workout" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Workout" inverseName="configuration" inverseEntity="Workout"/>
+    </entity>
+    <entity name="WorkoutSet" representedClassName="WorkoutSet" syncable="YES" codeGenerationType="class">
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="durationSeconds" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="setNumber" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="startedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="wasCompleted" attributeType="Boolean" usesScalarValueType="YES"/>
+        <relationship name="roundSplits" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="RoundSplit" inverseName="workoutSet" inverseEntity="RoundSplit"/>
+        <relationship name="workout" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Workout" inverseName="sets" inverseEntity="Workout"/>
+    </entity>
+    <entity name="RoundSplit" representedClassName="RoundSplit" syncable="YES" codeGenerationType="class">
+        <attribute name="cumulativeTime" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="roundNumber" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="splitTime" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="workoutSet" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WorkoutSet" inverseName="roundSplits" inverseEntity="WorkoutSet"/>
+    </entity>
+    <entity name="CounterEvent" representedClassName="CounterEvent" syncable="YES" codeGenerationType="class">
+        <attribute name="counterType" attributeType="String"/>
+        <attribute name="elapsedSeconds" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="value" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="workout" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Workout" inverseName="counterEvents" inverseEntity="Workout"/>
+    </entity>
+</model>

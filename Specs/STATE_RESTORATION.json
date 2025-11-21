@@ -1,0 +1,248 @@
+{
+  "state_restoration": {
+    "description": "Mechanism to recover in-progress workouts after app termination",
+    "purpose": "Prevent data loss from crashes, background kills, or accidental force-quits",
+    "strategy": "automatic restoration with time-based expiry"
+  },
+  "restoration_policy": {
+    "mode": "auto_restore",
+    "behavior": "Seamlessly restore workout state on app relaunch without user prompt",
+    "user_experience": "App opens to TimerView with workout paused at last known time",
+    "timeout": {
+      "duration": 3600,
+      "unit": "seconds (1 hour)",
+      "behavior_after_expiry": "Auto-save workout as incomplete, clear restoration state, start fresh"
+    }
+  },
+  "saved_state_structure": {
+    "description": "Complete workout state persisted for restoration",
+    "storage": {
+      "mechanism": "UserDefaults (App Group for potential widget/extension support)",
+      "key": "com.workoutTimer.activeWorkoutState",
+      "format": "JSON-encoded Codable struct"
+    },
+    "data_model": {
+      "WorkoutState": {
+        "workout_id": "UUID (matches Core Data Workout entity)",
+        "timer_type": "String (FT/AMRAP/EMOM)",
+        "state": "String (running/paused - always restored as paused)",
+        "start_timestamp": "Date (when workout originally started)",
+        "last_update_timestamp": "Date (when state was last saved)",
+        "elapsed_seconds": "Double (total elapsed time when state saved)",
+        "accumulated_paused_seconds": "Double (total time spent in paused state)",
+        "configuration": {
+          "duration_seconds": "Int?",
+          "time_cap_seconds": "Int?",
+          "num_intervals": "Int?",
+          "interval_duration_seconds": "Int?",
+          "num_sets": "Int",
+          "rest_duration_seconds": "Int?",
+          "current_set": "Int (1-indexed)"
+        },
+        "counters": {
+          "rep_count": "Int?",
+          "round_count": "Int?"
+        },
+        "interval_state": {
+          "current_interval": "Int? (for EMOM)",
+          "interval_start_time": "Date? (wall-clock time of current interval start)"
+        }
+      }
+    }
+  },
+  "save_triggers": {
+    "description": "When to persist state for restoration",
+    "events": [
+      {
+        "trigger": "app_enters_background",
+        "action": "Save complete workout state to UserDefaults",
+        "timing": "In applicationDidEnterBackground",
+        "note": "Primary save trigger - user locks phone or switches apps"
+      },
+      {
+        "trigger": "timer_tick",
+        "action": "Update elapsed_seconds in saved state",
+        "frequency": "every 5 seconds while running",
+        "rationale": "Minimize data loss if app crashes; balance performance"
+      },
+      {
+        "trigger": "state_change",
+        "action": "Save immediately on pause/resume/set_complete",
+        "timing": "Synchronous on state transition",
+        "rationale": "Ensure critical state changes persisted"
+      },
+      {
+        "trigger": "counter_increment",
+        "action": "Update counter values in saved state",
+        "timing": "Immediately when user taps rep/round button",
+        "rationale": "Don't lose counter data"
+      },
+      {
+        "trigger": "workout_finished",
+        "action": "Clear saved state (no longer needed)",
+        "timing": "After saving final workout to Core Data",
+        "rationale": "Cleanup - finished workouts don't need restoration"
+      }
+    ],
+    "autosave_interval": {
+      "frequency": "every 5 seconds",
+      "implementation": "Timer.publish(every: 5.0, on: .main, in: .common)",
+      "data_updated": "elapsed_seconds, last_update_timestamp"
+    }
+  },
+  "restoration_flow": {
+    "on_app_launch": {
+      "step_1": "Check UserDefaults for saved WorkoutState",
+      "step_2": "If no saved state exists, show HomeView (normal flow)",
+      "step_3": "If saved state exists, check last_update_timestamp",
+      "step_4a": "If age < 1 hour: restore workout",
+      "step_4b": "If age ≥ 1 hour: discard and save as incomplete",
+      "step_5": "Navigate to TimerView with restored state (paused)"
+    },
+    "restoration_logic": {
+      "check_age": {
+        "calculation": "Date().timeIntervalSince(state.last_update_timestamp)",
+        "threshold": 3600,
+        "if_expired": "Save workout to Core Data with was_completed=false, clear state"
+      },
+      "restore_timer": {
+        "initial_state": "paused (never auto-resume)",
+        "elapsed_time": "state.elapsed_seconds",
+        "timer_display": "Show last known time",
+        "user_action_required": "User must tap Start/Resume to continue",
+        "note": "Prevents surprising user with auto-running timer"
+      },
+      "restore_ui": {
+        "screen": "Navigate to TimerView (not HomeView)",
+        "configuration": "Load from state.configuration",
+        "counters": "Restore rep_count/round_count",
+        "set_indicator": "Show current_set if multi-set workout"
+      }
+    },
+    "expired_state_handling": {
+      "action": "Auto-save as incomplete workout",
+      "steps": [
+        "Retrieve workout_id from saved state",
+        "Load Workout entity from Core Data",
+        "Set was_completed = false",
+        "Set completed_at = state.last_update_timestamp",
+        "Set total_duration_seconds = state.elapsed_seconds",
+        "Save to Core Data",
+        "Clear UserDefaults saved state",
+        "Show HomeView as normal app launch"
+      ],
+      "user_notification": {
+        "enabled": false,
+        "rationale": "Silent cleanup - workout saved to history, user can find it there if needed"
+      }
+    }
+  },
+  "background_audio_behavior": {
+    "on_app_kill": {
+      "action": "Background audio stops",
+      "timing": "Immediately when app terminates",
+      "rationale": "iOS terminates audio session when app is killed"
+    },
+    "on_restoration": {
+      "action": "Do NOT restart background audio automatically",
+      "rationale": "Workout restored as paused; only start audio when user taps Start to resume",
+      "note": "Background audio lifecycle managed by timer state, not restoration"
+    },
+    "pending_notifications": {
+      "action": "Cancel all scheduled notifications on app kill",
+      "timing": "Best-effort in applicationWillTerminate",
+      "note": "If app crashes, notifications may still fire; user can dismiss manually"
+    }
+  },
+  "edge_cases": {
+    "force_quit_by_user": {
+      "detection": "Not possible to distinguish from crash",
+      "behavior": "Treat same as crash - restore state if within 1 hour",
+      "note": "User explicitly force-quitting is edge case; auto-restore is still helpful"
+    },
+    "device_restart": {
+      "behavior": "Saved state persists in UserDefaults across reboots",
+      "restoration": "Same 1-hour rule applies; restore if within threshold"
+    },
+    "multiple_app_launches_within_hour": {
+      "scenario": "App killed, relaunched, killed again within 1 hour",
+      "behavior": "Each relaunch restores state; 1-hour timer resets on each save",
+      "note": "last_update_timestamp updated every 5 seconds, so timer effectively resets"
+    },
+    "workout_at_exactly_1_hour": {
+      "behavior": "If elapsed_seconds ≥ 3600, still restore (user doing long workout)",
+      "distinction": "1-hour threshold based on time_since_save, not workout_duration"
+    },
+    "corrupted_state_data": {
+      "detection": "JSON decoding fails",
+      "recovery": "Log error, clear saved state, show HomeView",
+      "fallback": "Workout may be lost; consider Core Data autosave as backup"
+    },
+    "missing_core_data_workout": {
+      "scenario": "Saved state references workout_id that doesn't exist in Core Data",
+      "recovery": "Recreate Workout entity from saved state",
+      "note": "Shouldn't happen but defensive coding"
+    }
+  },
+  "testing": {
+    "manual_tests": [
+      "Start workout, force-quit app, relaunch → should restore paused",
+      "Start workout, background app for 30 min, relaunch → should restore",
+      "Start workout, wait 2 hours, relaunch → should start fresh, workout in history as incomplete",
+      "Restore paused workout, tap Start → should continue from correct time",
+      "Increment reps, force-quit, relaunch → counter values restored"
+    ],
+    "automated_tests": [
+      "Unit test: WorkoutState Codable encoding/decoding",
+      "Unit test: Age calculation and expiry logic",
+      "Unit test: Restoration from valid state",
+      "Unit test: Handling expired state (auto-save as incomplete)",
+      "Unit test: Clearing state on workout completion",
+      "Integration test: Full app launch → restoration flow"
+    ],
+    "qa_scenarios": [
+      "Soak test: Long workout with app backgrounded multiple times",
+      "Crash simulation: Kill app during active workout, verify restoration",
+      "Time drift: Restore workout, verify elapsed time accuracy ±150ms",
+      "Multi-set workout: Restore during rest period, verify set tracking",
+      "EMOM: Restore mid-interval, verify interval state"
+    ]
+  },
+  "implementation_notes": {
+    "app_delegate_integration": {
+      "applicationDidEnterBackground": "Call WorkoutStateManager.saveCurrentState()",
+      "applicationWillTerminate": "Call WorkoutStateManager.saveCurrentState() (best-effort)",
+      "note": "willTerminate rarely called, rely on didEnterBackground + autosave"
+    },
+    "scene_delegate_integration": {
+      "sceneDidEnterBackground": "Save state",
+      "sceneWillEnterForeground": "Check for restoration (if returning from background)",
+      "note": "Use SceneDelegate if supporting multiple windows/scenes"
+    },
+    "di_integration": "WorkoutStateManager as singleton or injected service",
+    "state_management": "TimerViewModel observes WorkoutStateManager for restoration",
+    "concurrency": "Ensure UserDefaults writes are thread-safe (dispatch to main queue)",
+    "app_group": {
+      "required": false,
+      "reason": "Optional for future widget/extension support; not needed for iOS 15 background audio",
+      "identifier": "group.com.yourcompany.WorkoutTimer",
+      "note": "Can use standard UserDefaults if no extensions planned"
+    }
+  },
+  "privacy_and_security": {
+    "data_sensitivity": "Low - no personal info, just workout state",
+    "encryption": "UserDefaults not encrypted by default; acceptable for this use case",
+    "data_retention": "Auto-cleanup after 1 hour or on workout completion",
+    "icloud_sync": "Do NOT sync saved state to iCloud (local device only)"
+  },
+  "future_enhancements": {
+    "suggestions": [
+      "Push notification reminder if workout abandoned for 30 min",
+      "Extend timeout to 2-4 hours for ultra-endurance workouts",
+      "User setting: 'Auto-resume timers' toggle",
+      "Crash analytics: Track how often restoration is needed",
+      "Background task: Continue timer updates even when app killed (requires Background Modes)",
+      "Multiple device sync: Resume workout on different device (iCloud)"
+    ]
+  }
+}

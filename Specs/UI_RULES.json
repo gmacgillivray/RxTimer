@@ -1,0 +1,106 @@
+{
+  "theme": "dark_high_contrast",
+  "timeFontMin": 64,
+  "buttonMinSizePt": 52,
+  "primaryActions": [
+    "StartPause",
+    "Reset",
+    "Finish"
+  ],
+  "reachability": "bottom_weighted",
+  "displayDistanceFt": [
+    3,
+    15
+  ],
+  "layoutStates": [
+    "idle",
+    "running",
+    "paused",
+    "resting",
+    "finished"
+  ],
+  "wakeLock": true,
+  "screenReader": {
+    "announceOn": [
+      "start",
+      "interval",
+      "last_minute",
+      "30s_left",
+      "finish"
+    ],
+    "labels": {
+      "StartPause": "Start or Pause Timer",
+      "Reset": "Reset Timer",
+      "Finish": "End Workout Early"
+    }
+  },
+  "timerDisplayRules": {
+    "AMRAP": {
+      "idleState": {
+        "mainDisplay": "configured_duration",
+        "stateIndicator": "Ready",
+        "stateColor": "gray",
+        "opacity": 0.6,
+        "saturation": 0.7
+      },
+      "mainDisplay": {
+        "content": "remaining_time",
+        "direction": "countdown",
+        "accessibilityLabel": "Time Remaining",
+        "fontSizeMultiplier": 1.0
+      },
+      "secondaryDisplay": {
+        "content": "elapsed_time",
+        "direction": "countup",
+        "label": "Elapsed Time",
+        "accessibilityLabel": "Elapsed Time",
+        "fontSizeMultiplier": 0.3,
+        "visibleWhen": "running"
+      },
+      "roundDisplay": {
+        "content": "current_round_elapsed",
+        "direction": "countup",
+        "label": "Current Round",
+        "fontSizeMultiplier": 0.4,
+        "visibleWhen": "running"
+      }
+    },
+    "FT": {
+      "idleState": {
+        "mainDisplay": "00:00",
+        "stateIndicator": "Ready",
+        "stateColor": "gray",
+        "opacity": 0.6,
+        "saturation": 0.7
+      },
+      "mainDisplay": {
+        "content": "elapsed_time",
+        "direction": "countup",
+        "accessibilityLabel": "Elapsed Time",
+        "fontSizeMultiplier": 1.0
+      },
+      "roundDisplay": {
+        "content": "current_round_elapsed",
+        "direction": "countup",
+        "label": "Current Round",
+        "fontSizeMultiplier": 0.4,
+        "visibleWhen": "running"
+      }
+    },
+    "EMOM": {
+      "idleState": {
+        "mainDisplay": "first_interval_duration",
+        "stateIndicator": "Ready",
+        "stateColor": "gray",
+        "opacity": 0.6,
+        "saturation": 0.7
+      },
+      "mainDisplay": {
+        "content": "total_elapsed",
+        "direction": "countup",
+        "accessibilityLabel": "Total Elapsed Time",
+        "fontSizeMultiplier": 1.0
+      }
+    }
+  }
+}

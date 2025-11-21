@@ -1,0 +1,225 @@
+{
+  "counter_behavior": {
+    "description": "Manual counter tracking for reps (FT), rounds (AMRAP), and automatic set counting",
+    "purpose": "Allow users to track workout metrics without interrupting timer flow"
+  },
+  "counter_types": {
+    "rep_counter": {
+      "timer_types": ["FT"],
+      "label": "Reps",
+      "description": "Count individual repetitions during For Time workouts",
+      "initial_value": 0,
+      "increment": 1,
+      "max_value": 9999,
+      "manual": true
+    },
+    "round_counter": {
+      "timer_types": ["AMRAP"],
+      "label": "Rounds",
+      "description": "Count completed rounds during AMRAP workouts",
+      "initial_value": 0,
+      "increment": 1,
+      "max_value": 999,
+      "manual": true
+    },
+    "set_counter": {
+      "timer_types": ["FT", "AMRAP", "EMOM"],
+      "label": "Set",
+      "description": "Automatically tracks current set number in multi-set workouts",
+      "initial_value": 1,
+      "increment": "automatic",
+      "display_format": "Set {current} of {total}",
+      "manual": false,
+      "visible_when": "num_sets > 1"
+    },
+    "interval_counter": {
+      "timer_types": ["EMOM"],
+      "label": "Interval",
+      "description": "Automatically tracks current interval in EMOM",
+      "initial_value": 1,
+      "increment": "automatic",
+      "display_format": "Interval {current} of {total}",
+      "manual": false,
+      "visible": true
+    }
+  },
+  "ui_implementation": {
+    "counter_button": {
+      "description": "Large vertical tap zone for incrementing manual counters",
+      "position": "right_side",
+      "layout": {
+        "width": "25% of screen width",
+        "height": "extends from below time display to above bottom buttons",
+        "min_width": "80pt",
+        "min_height": "200pt",
+        "alignment": "trailing (right edge)"
+      },
+      "appearance": {
+        "background": "semi-transparent overlay or subtle border",
+        "border": "1pt hairline in theme accent color",
+        "corner_radius": "12pt on left side, 0pt on right",
+        "opacity": "0.3 idle, 1.0 when pressed"
+      },
+      "content": {
+        "display_format": "{counter_type}: {count}",
+        "examples": [
+          "Reps: 0",
+          "Reps: 25",
+          "Rounds: 7"
+        ],
+        "font_size": "24pt (scales with Dynamic Type)",
+        "font_weight": "semibold",
+        "text_color": "high contrast against background",
+        "alignment": "centered in button"
+      },
+      "visible_when": {
+        "timer_state": "running",
+        "timer_type": "FT or AMRAP",
+        "note": "Hidden during idle, paused, resting, finished states"
+      },
+      "interaction": {
+        "tap": "increment counter by 1",
+        "long_press": "no action (increment only, no decrement)",
+        "accessibility_hint": "Tap to count {rep/round}"
+      }
+    },
+    "counter_feedback": {
+      "haptic": {
+        "type": "UIImpactFeedbackGenerator.light",
+        "timing": "immediately on tap",
+        "note": "Distinct from timer event haptics (rigid/warning/success)"
+      },
+      "visual": {
+        "animation": "brief scale pulse (1.0 → 1.15 → 1.0)",
+        "duration": "0.2 seconds",
+        "timing_curve": "ease-out"
+      },
+      "audio": {
+        "sound": "none",
+        "rationale": "Avoid audio clutter during workout; haptic is sufficient"
+      }
+    },
+    "automatic_counters": {
+      "set_counter": {
+        "position": "top of screen, small text",
+        "format": "Set 2 of 3",
+        "visible_when": "num_sets > 1",
+        "updates": "automatically when set completes and rest begins"
+      },
+      "interval_counter": {
+        "position": "below main time display (secondary display area)",
+        "format": "Interval 7 of 10",
+        "visible_when": "timer_type == EMOM",
+        "updates": "automatically at each interval boundary"
+      }
+    }
+  },
+  "state_behavior": {
+    "timer_idle": {
+      "manual_counters": "not visible",
+      "automatic_counters": "show initial state (Set 1 of X if applicable)"
+    },
+    "timer_running": {
+      "manual_counters": "visible and active",
+      "automatic_counters": "visible and updating",
+      "increment_action": "record CounterEvent with timestamp and elapsed time"
+    },
+    "timer_paused": {
+      "manual_counters": "not visible (cannot count during pause)",
+      "automatic_counters": "visible, frozen at current value",
+      "rationale": "Prevent accidental counting; focus on pause/resume decision"
+    },
+    "timer_resting": {
+      "manual_counters": "not visible (rest state, no work happening)",
+      "automatic_counters": "set counter visible showing next set",
+      "note": "Set counter shows 'Set 2 of 3' during rest before set 2"
+    },
+    "timer_finished": {
+      "manual_counters": "not visible",
+      "automatic_counters": "visible showing final state",
+      "note": "Final counts displayed on workout summary screen"
+    }
+  },
+  "data_persistence": {
+    "storage": "CounterEvent entity in Core Data",
+    "on_increment": {
+      "action": "Create new CounterEvent",
+      "data": {
+        "counter_type": "rep or round",
+        "value": "new count value",
+        "timestamp": "Date()",
+        "elapsed_seconds": "elapsed time since workout start"
+      },
+      "timing": "immediately on tap, before haptic/animation"
+    },
+    "on_workout_complete": {
+      "action": "All CounterEvents saved as part of Workout entity",
+      "accessible": "from workout history detail screen"
+    },
+    "recovery": {
+      "on_app_crash": "CounterEvents restored from last autosave",
+      "note": "autosave every 5 seconds includes counter state"
+    }
+  },
+  "accessibility": {
+    "voiceover": {
+      "label": "Counter button. {Reps/Rounds}: {count}",
+      "hint": "Tap to increment {rep/round} count",
+      "value": "{count}",
+      "trait": "button",
+      "announcement_on_increment": "{counter_type} count: {new_value}"
+    },
+    "dynamic_type": {
+      "counter_button_font": "scales up to accessibility sizes",
+      "min_font_size": "24pt",
+      "max_font_size": "48pt (at XXXL)"
+    },
+    "motor_accessibility": {
+      "button_size": "minimum 80pt wide × 200pt tall",
+      "rationale": "Large target for users with limited dexterity during intense workout",
+      "edge_position": "right screen edge easy to find without looking"
+    },
+    "contrast": {
+      "requirement": "≥7:1 ratio per WCAG AA",
+      "verification": "test with high contrast theme"
+    }
+  },
+  "edge_cases": {
+    "max_value_reached": {
+      "action": "allow increment to continue (no hard limit enforced)",
+      "note": "9999 reps is unrealistic but don't block if somehow reached"
+    },
+    "rapid_tapping": {
+      "debounce": "none",
+      "rationale": "Every tap should count; fast reps are valid (e.g., double-unders)",
+      "performance": "ensure haptic generator pre-warmed to avoid lag"
+    },
+    "interruption_during_count": {
+      "phone_call": "counter state persisted, restored on resume",
+      "app_background": "counter state saved in autosave"
+    },
+    "multi_set_counter_reset": {
+      "action": "manual counters (rep/round) do NOT reset between sets",
+      "rationale": "total cumulative count across all sets",
+      "example": "3 sets AMRAP: Rounds counter goes 0→5→10→14 (not 0→5→0→5→0→4)"
+    }
+  },
+  "future_enhancements": {
+    "suggestions": [
+      "Counter button on left side (accessibility setting)",
+      "Decrement functionality with undo gesture",
+      "Voice count announcements (e.g., every 10 reps)",
+      "Counter button mirrored on both sides",
+      "Custom counter types (e.g., 'Calories', 'Meters')"
+    ]
+  },
+  "implementation_notes": {
+    "di_integration": "CounterService injected through DI container",
+    "state_management": "Counter state part of TimerViewModel",
+    "testing": {
+      "unit_tests": "Verify counter increment logic, persistence",
+      "ui_tests": "Verify button visibility per state, tap increments count",
+      "accessibility_tests": "Verify VoiceOver labels and announcements"
+    }
+  }
+}
