@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RxTimer App Icon</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .icon-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #1E3A8A;
+            margin-bottom: 10px;
+        }
+        .instructions {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .instructions h2 {
+            color: #1E3A8A;
+            margin-top: 0;
+        }
+        .instructions ol {
+            line-height: 1.8;
+        }
+        .color-palette {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .color-swatch {
+            text-align: center;
+        }
+        .color-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        .color-label {
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>RxTimer App Icon</h1>
+    <div class="icon-container">
+        <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" id="appIcon">
+            <!-- Background with gradient -->
+            <defs>
+                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1E3A8A;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+                </linearGradient>
+
+                <linearGradient id="timerRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#F97316;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FB923C;stop-opacity:1" />
+                </linearGradient>
+
+                <!-- Subtle texture for depth -->
+                <filter id="innerShadow">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- Rounded rectangle background -->
+            <rect width="1024" height="1024" rx="226" fill="url(#bgGradient)"/>
+
+            <!-- Timer ring (partial circle) -->
+            <circle cx="512" cy="512" r="340" fill="none"
+                    stroke="#1E3A8A" stroke-width="40" opacity="0.3"/>
+            <path d="M 512 172 A 340 340 0 1 1 267.8 267.8"
+                  fill="none"
+                  stroke="url(#timerRingGradient)"
+                  stroke-width="40"
+                  stroke-linecap="round"
+                  opacity="0.9"/>
+
+            <!-- Rx symbol -->
+            <g id="rxSymbol" filter="url(#innerShadow)">
+                <!-- R letter -->
+                <path d="M 280 380 L 280 640 M 280 380 L 380 380 Q 450 380 450 450 Q 450 510 390 520 L 280 520 M 390 520 L 470 640"
+                      stroke="#FFFFFF"
+                      stroke-width="58"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      fill="none"/>
+
+                <!-- x letter (lowercase) -->
+                <path d="M 520 480 L 660 640 M 660 480 L 520 640"
+                      stroke="#FFFFFF"
+                      stroke-width="58"
+                      stroke-linecap="round"
+                      fill="none"/>
+            </g>
+
+            <!-- Small clock accent (minimalist) -->
+            <g id="clockAccent" opacity="0.4">
+                <!-- Clock hand pointing to 12 o'clock position -->
+                <line x1="512" y1="280" x2="512" y2="230"
+                      stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+                <line x1="512" y1="280" x2="542" y2="260"
+                      stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+                <circle cx="512" cy="280" r="8" fill="#FFFFFF"/>
+            </g>
+
+            <!-- Subtle highlight for depth -->
+            <ellipse cx="512" cy="280" rx="200" ry="60" fill="#FFFFFF" opacity="0.08"/>
+        </svg>
+    </div>
+
+    <div class="color-palette">
+        <div class="color-swatch">
+            <div class="color-box" style="background: #1E3A8A;"></div>
+            <div class="color-label">#1E3A8A<br>Deep Blue</div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-box" style="background: #FFFFFF; border: 1px solid #ddd;"></div>
+            <div class="color-label">#FFFFFF<br>White</div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-box" style="background: linear-gradient(135deg, #F97316, #FB923C);"></div>
+            <div class="color-label">#F97316<br>Orange Accent</div>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h2>Export Instructions</h2>
+        <ol>
+            <li><strong>Open this HTML file in a browser</strong> (Safari, Chrome, or Firefox)</li>
+            <li><strong>Right-click on the icon</strong> and select "Inspect Element" or "Inspect"</li>
+            <li><strong>In the developer tools</strong>, right-click on the <code>&lt;svg&gt;</code> element</li>
+            <li><strong>Copy the SVG</strong> and save it as <code>RxTimer-Icon.svg</code></li>
+            <li><strong>Use a tool to convert SVG to PNG at 1024x1024:</strong>
+                <ul>
+                    <li><strong>Online:</strong> CloudConvert, SVGtoPNG, or similar</li>
+                    <li><strong>Mac:</strong> Open in Affinity Designer, Sketch, or Figma and export</li>
+                    <li><strong>Command line:</strong> <code>rsvg-convert -w 1024 -h 1024 RxTimer-Icon.svg -o AppIcon.png</code></li>
+                </ul>
+            </li>
+            <li><strong>Alternative quick method:</strong> Take a screenshot of just the icon at high resolution, then resize to exactly 1024x1024px in Preview or Photoshop</li>
+        </ol>
+
+        <h2>Design Notes</h2>
+        <ul>
+            <li><strong>Style:</strong> Medical-inspired "Rx" prescription symbol with timer ring</li>
+            <li><strong>Colors:</strong> Deep blue gradient (#1E3A8A) with white Rx and orange accent</li>
+            <li><strong>Timer Ring:</strong> Partial circular progress ring suggesting countdown/timing</li>
+            <li><strong>Minimalist Clock:</strong> Subtle clock hands at 2 o'clock position (top right)</li>
+            <li><strong>iOS Compliance:</strong> 226px corner radius for iOS icon standard</li>
+        </ul>
+
+        <h2>Alternative Design Options</h2>
+        <p>If you'd like variations, you can modify the SVG above:</p>
+        <ul>
+            <li><strong>More orange:</strong> Change timer ring to be more prominent (increase opacity)</li>
+            <li><strong>Different timer position:</strong> Adjust the timer arc path</li>
+            <li><strong>Bolder Rx:</strong> Increase stroke-width on the Rx paths</li>
+            <li><strong>Remove clock accent:</strong> Delete the clockAccent group for cleaner look</li>
+        </ul>
+    </div>
+
+    <script>
+        // Allow downloading SVG directly
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = 'Download SVG';
+            downloadBtn.style.cssText = 'margin-top: 20px; padding: 12px 24px; background: #1E3A8A; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;';
+            downloadBtn.onclick = function() {
+                const svg = document.getElementById('appIcon');
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+                const svgUrl = URL.createObjectURL(svgBlob);
+                const downloadLink = document.createElement('a');
+                downloadLink.href = svgUrl;
+                downloadLink.download = 'RxTimer-Icon.svg';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            };
+            document.querySelector('.icon-container').after(downloadBtn);
+        });
+    </script>
+</body>
+</html>

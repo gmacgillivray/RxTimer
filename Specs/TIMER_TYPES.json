@@ -1,0 +1,210 @@
+{
+  "app": "RxTimer",
+  "appName": "RxTimer - CrossFit WOD Timer",
+  "tagline": "As prescribed. As performed.",
+  "timers": [
+    {
+      "type": "FT",
+      "id": "for_time",
+      "direction": "up",
+      "startAt": 0,
+      "timeCapSeconds": {
+        "optional": true
+      },
+      "display": {
+        "idle": {
+          "primaryTimer": "00:00",
+          "stateIndicator": "Ready",
+          "opacity": 0.6,
+          "saturation": 0.7
+        }
+      },
+      "counters": [
+        "rep",
+        "set"
+      ],
+      "events": [
+        {
+          "name": "start",
+          "at": 0,
+          "audio": "start",
+          "haptic": "rigid"
+        },
+        {
+          "name": "finish",
+          "at": "timeCapSeconds",
+          "audio": "end",
+          "haptic": "success"
+        }
+      ]
+    },
+    {
+      "type": "AMRAP",
+      "id": "amrap",
+      "direction": "down",
+      "startAt": "configuredSeconds",
+      "display": {
+        "idle": {
+          "primaryTimer": "configuredDuration",
+          "stateIndicator": "Ready",
+          "opacity": 0.6,
+          "saturation": 0.7
+        },
+        "primaryTimer": {
+          "label": "Time Remaining",
+          "format": "countdown",
+          "accessibilityLabel": "Time Remaining"
+        },
+        "secondaryTimer": {
+          "label": "Elapsed Time",
+          "format": "countup",
+          "fontSize": "30%",
+          "accessibilityLabel": "Elapsed Time"
+        },
+        "roundTimer": {
+          "label": "Current Round",
+          "format": "countup",
+          "fontSize": "40%"
+        }
+      },
+      "counters": [
+        "round"
+      ],
+      "events": [
+        {
+          "name": "start",
+          "at": 0,
+          "audio": "start"
+        },
+        {
+          "name": "last_minute",
+          "at": "60s_from_end",
+          "audio": "warn"
+        },
+        {
+          "name": "30s_left",
+          "at": "30s_from_end",
+          "audio": "warn"
+        },
+        {
+          "name": "countdown_10s",
+          "at": "10s_from_end",
+          "audio": "beep_1hz"
+        },
+        {
+          "name": "finish",
+          "at": "end",
+          "audio": "end"
+        }
+      ]
+    },
+    {
+      "type": "EMOM",
+      "id": "emom",
+      "direction": "intervals",
+      "totalSeconds": "configuredSeconds",
+      "intervalSeconds": "equal_split",
+      "dualDisplay": [
+        "currentInterval",
+        "totalElapsed"
+      ],
+      "display": {
+        "idle": {
+          "primaryTimer": "firstIntervalDuration",
+          "stateIndicator": "Ready",
+          "opacity": 0.6,
+          "saturation": 0.7
+        }
+      },
+      "events": [
+        {
+          "name": "interval_tick",
+          "at": "every_interval_start",
+          "audio": "tick"
+        },
+        {
+          "name": "finish",
+          "at": "end",
+          "audio": "end"
+        }
+      ]
+    }
+  ],
+  "sets": {
+    "supportsMultipleSets": true,
+    "restSeconds": "configurable",
+    "skipRest": true,
+    "restVisual": "full_screen_countdown",
+    "manualSetCompletion": {
+      "enabled": true,
+      "description": "User can manually complete a set before auto-completion",
+      "button": {
+        "notFinalSet": "Complete Set",
+        "finalSet": "Finish Workout",
+        "duringRest": "Skip Rest"
+      },
+      "behavior": {
+        "forTime": {
+          "withCap": "Manual or auto-complete when cap reached",
+          "noCap": "Manual completion only"
+        },
+        "amrap": "Manual or auto-complete when time expires",
+        "emom": "Manual or auto-complete when all intervals done"
+      }
+    }
+  },
+  "feedback": {
+    "audio": {
+      "configurable": true,
+      "packs": [
+        "basic_beeps",
+        "voice_minimal"
+      ],
+      "muteAll": true
+    },
+    "visual": {
+      "progressRing": true,
+      "countdownBanner": true
+    },
+    "haptics": {
+      "useHaptics": true,
+      "patterns": {
+        "start": "rigid",
+        "warn": "warning",
+        "end": "success",
+        "set_complete": "success",
+        "set_start": "rigid"
+      }
+    }
+  },
+  "multiSetEvents": {
+    "set_complete": {
+      "when": "User manually completes a set",
+      "audio": "end.caf",
+      "haptic": "success",
+      "voiceOver": "Set [N] complete"
+    },
+    "set_start": {
+      "when": "New set starts after rest period",
+      "audio": "start.caf",
+      "haptic": "rigid",
+      "voiceOver": "Set [N] starting"
+    },
+    "rest_start": {
+      "when": "Rest period begins between sets",
+      "audio": "end.caf",
+      "haptic": "success",
+      "voiceOver": "Rest period starting"
+    }
+  },
+  "summary": {
+    "persistLocally": true,
+    "fields": [
+      "totalDuration",
+      "setTimes[]",
+      "counterTimestamps[]",
+      "timerType",
+      "config"
+    ]
+  }
+}

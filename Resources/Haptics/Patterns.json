@@ -1,0 +1,5 @@
+{
+  "rigid": "UIImpactFeedbackGeneratorStyle.rigid",
+  "warning": "UINotificationFeedbackType.warning",
+  "success": "UINotificationFeedbackType.success"
+}
