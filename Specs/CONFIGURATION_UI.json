@@ -1,0 +1,261 @@
+{
+  "configuration_flow": {
+    "description": "Separate setup screen before starting timer",
+    "navigation": "HomeView → ConfigureTimerView → TimerView",
+    "user_flow": [
+      "User selects timer type (FT/AMRAP/EMOM) from HomeView",
+      "Navigate to ConfigureTimerView with selected type",
+      "User configures parameters",
+      "Tap 'Start Workout' button to navigate to TimerView with configuration",
+      "Timer begins immediately or requires explicit Start button (TBD)"
+    ]
+  },
+  "for_time_configuration": {
+    "screen_title": "Configure For Time",
+    "fields": [
+      {
+        "name": "time_cap",
+        "label": "Time Cap",
+        "type": "optional_toggle",
+        "default": "disabled",
+        "when_enabled": {
+          "input_type": "time_picker",
+          "format": "MM:SS",
+          "min": "0:30",
+          "max": "60:00",
+          "default": "20:00",
+          "increment": "30 seconds"
+        }
+      },
+      {
+        "name": "sets",
+        "label": "Number of Sets",
+        "type": "stepper",
+        "min": 1,
+        "max": 10,
+        "default": 1
+      },
+      {
+        "name": "rest_between_sets",
+        "label": "Rest Between Sets",
+        "type": "picker",
+        "visible_when": "sets > 1",
+        "options": "rest_duration_presets",
+        "default": "120"
+      }
+    ],
+    "counters": {
+      "rep_counter": {
+        "enabled": true,
+        "label": "Track Reps",
+        "description": "Manual button to increment rep count during workout"
+      },
+      "set_counter": {
+        "enabled": true,
+        "automatic": true,
+        "description": "Automatically tracks current set number"
+      }
+    }
+  },
+  "amrap_configuration": {
+    "screen_title": "Configure AMRAP",
+    "fields": [
+      {
+        "name": "duration",
+        "label": "Duration",
+        "type": "picker",
+        "options": "amrap_duration_presets",
+        "default": "600",
+        "custom_entry": {
+          "enabled": true,
+          "label": "Custom...",
+          "input_type": "time_picker",
+          "format": "MM:SS",
+          "min": "0:30",
+          "max": "60:00"
+        }
+      },
+      {
+        "name": "sets",
+        "label": "Number of Sets",
+        "type": "stepper",
+        "min": 1,
+        "max": 10,
+        "default": 1
+      },
+      {
+        "name": "rest_between_sets",
+        "label": "Rest Between Sets",
+        "type": "picker",
+        "visible_when": "sets > 1",
+        "options": "rest_duration_presets",
+        "default": "120"
+      }
+    ],
+    "counters": {
+      "round_counter": {
+        "enabled": true,
+        "label": "Track Rounds",
+        "description": "Manual button to increment round count during workout"
+      }
+    }
+  },
+  "emom_configuration": {
+    "screen_title": "Configure EMOM",
+    "fields": [
+      {
+        "name": "intervals",
+        "label": "Number of Intervals",
+        "type": "stepper",
+        "min": 1,
+        "max": 60,
+        "default": 10
+      },
+      {
+        "name": "interval_duration",
+        "label": "Interval Duration",
+        "type": "picker",
+        "options": "emom_interval_presets",
+        "default": "60"
+      },
+      {
+        "name": "calculated_total",
+        "label": "Total Duration",
+        "type": "read_only_display",
+        "value": "intervals × interval_duration",
+        "format": "MM:SS",
+        "description": "Auto-calculated, not user-editable"
+      },
+      {
+        "name": "sets",
+        "label": "Number of Sets",
+        "type": "stepper",
+        "min": 1,
+        "max": 10,
+        "default": 1
+      },
+      {
+        "name": "rest_between_sets",
+        "label": "Rest Between Sets",
+        "type": "picker",
+        "visible_when": "sets > 1",
+        "options": "rest_duration_presets",
+        "default": "120"
+      }
+    ],
+    "note": "No manual counters for EMOM - interval number is automatic"
+  },
+  "preset_definitions": {
+    "amrap_duration_presets": {
+      "description": "Picker options for AMRAP duration in seconds",
+      "values": [
+        60, 120, 180, 240, 300, 360, 420, 480, 540, 600,
+        720, 840, 960, 1080, 1200,
+        1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600
+      ],
+      "display_format": "M:SS for ≤10min, MM:SS for >10min",
+      "examples": {
+        "60": "1:00",
+        "600": "10:00",
+        "720": "12:00",
+        "1800": "30:00",
+        "3600": "60:00"
+      }
+    },
+    "emom_interval_presets": {
+      "description": "Picker options for EMOM interval duration in seconds",
+      "values": [
+        15, 30, 45, 60, 90, 120,
+        150, 180, 210, 240, 270, 300,
+        330, 360, 390, 420, 450, 480,
+        510, 540, 570, 600
+      ],
+      "display_format": "M:SS or 'EMOM :XX' labels",
+      "examples": {
+        "15": "0:15 (EMOM :15)",
+        "60": "1:00 (EMOM)",
+        "120": "2:00 (E2MOM)",
+        "600": "10:00 (E10MOM)"
+      }
+    },
+    "rest_duration_presets": {
+      "description": "Picker options for rest between sets in seconds",
+      "values": [
+        15, 30, 45, 60, 75, 90, 105, 120,
+        150, 180, 210, 240, 270, 300,
+        360, 420, 480, 540, 600
+      ],
+      "display_format": "M:SS",
+      "examples": {
+        "15": "0:15",
+        "120": "2:00",
+        "300": "5:00",
+        "600": "10:00"
+      },
+      "custom_entry": {
+        "enabled": true,
+        "label": "Custom...",
+        "input_type": "time_picker",
+        "format": "MM:SS",
+        "min": "0:10",
+        "max": "10:00"
+      }
+    }
+  },
+  "ui_layout": {
+    "screen_structure": "Form style with sections",
+    "sections": [
+      {
+        "title": "Timer Settings",
+        "fields": ["duration/intervals", "time_cap", "interval_duration"]
+      },
+      {
+        "title": "Multiple Sets",
+        "fields": ["sets", "rest_between_sets"],
+        "collapsible": false
+      }
+    ],
+    "primary_action": {
+      "button": "Start Workout",
+      "style": "large, bottom of screen, high contrast",
+      "min_height": "52pt",
+      "validation": "All required fields must be valid"
+    },
+    "accessibility": {
+      "labels": {
+        "time_cap_toggle": "Enable time cap for this workout",
+        "sets_stepper": "Number of sets",
+        "duration_picker": "Select workout duration",
+        "start_button": "Start workout with configured settings"
+      },
+      "hints": {
+        "custom_entry": "Double tap to enter custom duration",
+        "calculated_total": "Total workout time calculated from intervals"
+      }
+    }
+  },
+  "validation_rules": {
+    "max_total_workout_time": {
+      "value": 7200,
+      "description": "2 hours including all sets and rest (safety limit)"
+    },
+    "min_interval_duration": {
+      "value": 15,
+      "description": "15 seconds minimum for EMOM intervals"
+    },
+    "min_amrap_duration": {
+      "value": 30,
+      "description": "30 seconds minimum for AMRAP"
+    },
+    "error_messages": {
+      "total_too_long": "Total workout time exceeds 2 hours. Reduce sets or duration.",
+      "interval_too_short": "Interval duration must be at least 15 seconds.",
+      "duration_required": "Please select a workout duration."
+    }
+  },
+  "notes": {
+    "skip_rest_feature": "During rest screen, show 'Skip Rest' button per TIMER_TYPES.json spec",
+    "preset_persistence": "Consider remembering last-used configuration per timer type",
+    "quick_start_future": "Could add 'Quick Start with Defaults' option in future iteration"
+  }
+}

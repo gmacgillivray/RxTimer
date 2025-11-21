@@ -1,0 +1,119 @@
+{
+  "emom_configuration": {
+    "description": "EMOM timers configured by number of intervals and interval duration",
+    "input_model": {
+      "intervals": {
+        "type": "integer",
+        "min": 1,
+        "max": 60,
+        "default": 10,
+        "ui": "stepper or picker"
+      },
+      "interval_duration_seconds": {
+        "type": "preset_selection",
+        "presets": [
+          15,
+          30,
+          45,
+          60,
+          90,
+          120,
+          150,
+          180,
+          210,
+          240,
+          270,
+          300,
+          330,
+          360,
+          390,
+          420,
+          450,
+          480,
+          510,
+          540,
+          570,
+          600
+        ],
+        "default": 60,
+        "ui": "picker with formatted display (e.g., '1:00', '2:30', '10:00')"
+      }
+    },
+    "calculated_values": {
+      "total_duration": "intervals × interval_duration_seconds",
+      "example": "10 intervals × 60s = 10:00 total"
+    },
+    "preset_descriptions": {
+      "15": "EMOM :15 (fast intervals)",
+      "30": "EMOM :30",
+      "45": "EMOM :45",
+      "60": "EMOM (standard every minute)",
+      "90": "EMOM 1:30",
+      "120": "E2MOM (every 2 minutes)",
+      "150": "EMOM 2:30",
+      "180": "E3MOM (every 3 minutes)",
+      "210": "EMOM 3:30",
+      "240": "E4MOM (every 4 minutes)",
+      "270": "EMOM 4:30",
+      "300": "E5MOM (every 5 minutes)",
+      "330": "EMOM 5:30",
+      "360": "E6MOM (every 6 minutes)",
+      "390": "EMOM 6:30",
+      "420": "E7MOM (every 7 minutes)",
+      "450": "EMOM 7:30",
+      "480": "E8MOM (every 8 minutes)",
+      "510": "EMOM 8:30",
+      "540": "E9MOM (every 9 minutes)",
+      "570": "EMOM 9:30",
+      "600": "E10MOM (every 10 minutes)"
+    },
+    "validation": {
+      "max_total_duration": 3600,
+      "reason": "1 hour max to prevent excessive battery drain and unrealistic workouts"
+    }
+  },
+  "runtime_behavior": {
+    "display": {
+      "primary": "Time remaining in current interval (counts down)",
+      "secondary": "Current interval number (e.g., '3 of 10') or total elapsed time",
+      "dual_display_mode": "user_preference in settings"
+    },
+    "audio_cues": {
+      "interval_start": {
+        "event": "interval_tick",
+        "timing": "at 0:00 of each interval",
+        "audio": "tick.caf",
+        "haptic": "light",
+        "voiceover": "Next interval" or "Interval {n}"
+      },
+      "interval_end_warning": {
+        "enabled": false,
+        "note": "Not needed - the next interval beep serves as warning"
+      },
+      "final_interval": {
+        "event": "finish",
+        "audio": "end.caf",
+        "haptic": "success",
+        "voiceover": "Workout complete"
+      }
+    },
+    "pause_behavior": {
+      "paused_mid_interval": "Resume from paused time within interval",
+      "note": "Does NOT snap to interval boundary on resume - maintains sub-second precision"
+    },
+    "interruption_recovery": {
+      "phone_call": "Resume at interval boundary (snap forward to next interval start)",
+      "example": "Call at 2:34 in interval 5 → resume at 0:00 of interval 6"
+    }
+  },
+  "ui_considerations": {
+    "interval_progress": {
+      "visual": "Progress ring showing interval completion",
+      "accessibility": "Announce interval number changes via VoiceOver"
+    },
+    "total_progress": {
+      "visual": "Small text showing 'Interval 7 of 10'",
+      "accessibility": "Available via VoiceOver tap on secondary display"
+    }
+  }
+}

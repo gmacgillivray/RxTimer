@@ -1,0 +1,343 @@
+{
+  "persistence_strategy": {
+    "framework": "Core Data",
+    "rationale": "Mature, handles unlimited workouts, supports complex queries for future features (trends, analytics)",
+    "target_ios": "iOS 15+",
+    "container_name": "WorkoutTimer"
+  },
+  "data_model": {
+    "entities": {
+      "Workout": {
+        "description": "Primary entity representing a completed or in-progress workout",
+        "attributes": {
+          "id": {
+            "type": "UUID",
+            "indexed": true,
+            "description": "Unique identifier"
+          },
+          "timestamp": {
+            "type": "Date",
+            "indexed": true,
+            "description": "When workout was started"
+          },
+          "completed_at": {
+            "type": "Date?",
+            "indexed": false,
+            "description": "When workout was finished (nil if incomplete)"
+          },
+          "timer_type": {
+            "type": "String",
+            "indexed": true,
+            "description": "FT, AMRAP, or EMOM"
+          },
+          "total_duration_seconds": {
+            "type": "Double",
+            "indexed": false,
+            "description": "Actual elapsed time from start to finish"
+          },
+          "was_completed": {
+            "type": "Bool",
+            "indexed": true,
+            "description": "true if finished normally, false if stopped early"
+          },
+          "notes": {
+            "type": "String?",
+            "indexed": false,
+            "description": "User-entered notes about the workout"
+          }
+        },
+        "relationships": {
+          "configuration": {
+            "destination": "WorkoutConfiguration",
+            "cardinality": "to-one",
+            "delete_rule": "cascade"
+          },
+          "sets": {
+            "destination": "WorkoutSet",
+            "cardinality": "to-many",
+            "delete_rule": "cascade",
+            "ordered": true
+          },
+          "counter_events": {
+            "destination": "CounterEvent",
+            "cardinality": "to-many",
+            "delete_rule": "cascade",
+            "ordered": true
+          }
+        }
+      },
+      "WorkoutConfiguration": {
+        "description": "Configuration parameters used for the workout",
+        "attributes": {
+          "id": {
+            "type": "UUID",
+            "indexed": false
+          },
+          "duration_seconds": {
+            "type": "Int?",
+            "description": "For AMRAP; nil for FT without cap"
+          },
+          "time_cap_seconds": {
+            "type": "Int?",
+            "description": "For FT time cap"
+          },
+          "num_intervals": {
+            "type": "Int?",
+            "description": "For EMOM"
+          },
+          "interval_duration_seconds": {
+            "type": "Int?",
+            "description": "For EMOM"
+          },
+          "num_sets": {
+            "type": "Int",
+            "description": "Number of sets configured"
+          },
+          "rest_duration_seconds": {
+            "type": "Int?",
+            "description": "Rest between sets; nil if single set"
+          }
+        },
+        "relationships": {
+          "workout": {
+            "destination": "Workout",
+            "cardinality": "to-one",
+            "inverse": "configuration"
+          }
+        }
+      },
+      "WorkoutSet": {
+        "description": "Individual set within a multi-set workout",
+        "attributes": {
+          "id": {
+            "type": "UUID",
+            "indexed": false
+          },
+          "set_number": {
+            "type": "Int",
+            "description": "1-indexed set number"
+          },
+          "started_at": {
+            "type": "Date",
+            "description": "When this set started"
+          },
+          "completed_at": {
+            "type": "Date?",
+            "description": "When this set finished; nil if incomplete"
+          },
+          "duration_seconds": {
+            "type": "Double",
+            "description": "Actual duration of this set"
+          },
+          "was_completed": {
+            "type": "Bool",
+            "description": "true if set finished normally"
+          }
+        },
+        "relationships": {
+          "workout": {
+            "destination": "Workout",
+            "cardinality": "to-one",
+            "inverse": "sets"
+          }
+        }
+      },
+      "CounterEvent": {
+        "description": "Timestamp when user incremented a counter (rep/round)",
+        "attributes": {
+          "id": {
+            "type": "UUID",
+            "indexed": false
+          },
+          "counter_type": {
+            "type": "String",
+            "description": "rep, round, or set"
+          },
+          "value": {
+            "type": "Int",
+            "description": "Counter value after increment"
+          },
+          "timestamp": {
+            "type": "Date",
+            "description": "When counter was incremented"
+          },
+          "elapsed_seconds": {
+            "type": "Double",
+            "description": "Elapsed time in workout when counter was hit"
+          }
+        },
+        "relationships": {
+          "workout": {
+            "destination": "Workout",
+            "cardinality": "to-one",
+            "inverse": "counter_events"
+          }
+        }
+      }
+    }
+  },
+  "retention_policy": {
+    "strategy": "keep_all",
+    "description": "Never auto-delete workouts. User can manually delete from history screen.",
+    "manual_deletion": {
+      "enabled": true,
+      "bulk_delete": false,
+      "note": "Individual workout deletion via swipe-to-delete on history list"
+    },
+    "future_considerations": [
+      "Export to CSV/JSON for backup",
+      "Archive old workouts (keep in DB but hide from main view)",
+      "iCloud sync for multi-device"
+    ]
+  },
+  "save_triggers": {
+    "description": "When to persist workout data",
+    "events": [
+      {
+        "trigger": "workout_started",
+        "action": "Create Workout entity with initial data",
+        "timing": "Immediately when timer starts"
+      },
+      {
+        "trigger": "set_completed",
+        "action": "Save WorkoutSet with duration and completion status",
+        "timing": "When set finishes or user skips rest"
+      },
+      {
+        "trigger": "counter_incremented",
+        "action": "Create CounterEvent with timestamp and elapsed time",
+        "timing": "Immediately when user taps rep/round button"
+      },
+      {
+        "trigger": "workout_finished",
+        "action": "Update Workout.completed_at and Workout.was_completed",
+        "timing": "When workout reaches natural end or user taps Finish"
+      },
+      {
+        "trigger": "workout_stopped_early",
+        "action": "Save current state with was_completed=false",
+        "timing": "When user exits mid-workout (background, force quit, etc.)"
+      },
+      {
+        "trigger": "notes_edited",
+        "action": "Update Workout.notes field",
+        "timing": "When user edits notes on history detail screen"
+      }
+    ],
+    "autosave": {
+      "enabled": true,
+      "interval": "every 5 seconds during active workout",
+      "rationale": "Minimize data loss if app crashes or device dies"
+    }
+  },
+  "history_screen": {
+    "navigation": "Tab bar item or HomeView navigation link",
+    "title": "Workout History",
+    "list_view": {
+      "sort_order": "chronological, newest first",
+      "cell_display": [
+        "Timer type icon/badge (FT/AMRAP/EMOM)",
+        "Primary: Date/time (e.g., 'Today 3:45 PM', 'Yesterday', 'Nov 12')",
+        "Secondary: Duration (e.g., '12:34', '3 sets')",
+        "Tertiary: Completion status (checkmark or 'Incomplete' badge)",
+        "Notes indicator (icon if notes exist)"
+      ],
+      "actions": {
+        "tap": "Navigate to WorkoutDetailView",
+        "swipe_left": "Delete option",
+        "long_press": "Quick actions (Share, Repeat Workout)"
+      },
+      "empty_state": {
+        "message": "No workouts yet",
+        "suggestion": "Complete a workout to see it here"
+      }
+    },
+    "detail_view": {
+      "title": "Workout Details",
+      "sections": [
+        {
+          "title": "Overview",
+          "fields": [
+            "Timer Type",
+            "Date & Time",
+            "Total Duration",
+            "Completion Status"
+          ]
+        },
+        {
+          "title": "Configuration",
+          "fields": [
+            "Sets",
+            "Rest Duration (if multi-set)",
+            "AMRAP Duration OR Time Cap OR Intervals+Interval Duration"
+          ]
+        },
+        {
+          "title": "Performance",
+          "fields": [
+            "Set Times (list each set duration)",
+            "Counter Events (reps/rounds with timestamps)",
+            "Total Reps/Rounds"
+          ],
+          "visible_when": "Data exists"
+        },
+        {
+          "title": "Notes",
+          "fields": [
+            "Editable text field for user notes"
+          ]
+        }
+      ],
+      "actions": {
+        "edit_notes": "Tap to edit notes inline",
+        "repeat_workout": "Button to start new workout with same config",
+        "share": "Export workout summary as text",
+        "delete": "Delete this workout (with confirmation)"
+      }
+    },
+    "accessibility": {
+      "voiceover_labels": {
+        "list_cell": "{Type} workout on {Date}, duration {Duration}, {Status}",
+        "delete_button": "Delete workout from {Date}",
+        "repeat_button": "Start new workout with same configuration"
+      },
+      "dynamic_type": "All text scales with user's preferred size"
+    }
+  },
+  "core_data_stack": {
+    "setup": {
+      "container_type": "NSPersistentContainer",
+      "merge_policy": "NSMergeByPropertyObjectTrumpMergePolicy",
+      "migration": "Lightweight migrations for schema updates"
+    },
+    "context_strategy": {
+      "main_context": "Use viewContext for all UI updates",
+      "background_context": "Use performBackgroundTask for autosave during workout",
+      "concurrency": "Ensure context operations on correct queue"
+    },
+    "fetch_requests": {
+      "all_workouts": {
+        "sort": "timestamp DESC",
+        "predicate": "none",
+        "batch_size": 50
+      },
+      "workouts_by_type": {
+        "sort": "timestamp DESC",
+        "predicate": "timer_type == %@",
+        "batch_size": 50
+      },
+      "incomplete_workouts": {
+        "sort": "timestamp DESC",
+        "predicate": "was_completed == NO",
+        "use_case": "Show user incomplete workouts to resume or delete"
+      }
+    }
+  },
+  "implementation_notes": {
+    "di_integration": "Inject PersistenceController through DI container",
+    "testing": "Use in-memory Core Data store for unit tests",
+    "preview": "Use preview-specific in-memory store for SwiftUI previews",
+    "error_handling": "Log Core Data errors; show user-friendly messages for save failures",
+    "performance": "Batch fetch requests; use faulting; avoid loading all workouts at once"
+  }
+}

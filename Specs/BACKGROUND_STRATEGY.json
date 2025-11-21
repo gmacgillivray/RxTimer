@@ -1,0 +1,245 @@
+{
+  "background_strategy_ios15": {
+    "description": "iOS 15 background operation using audio session and local notifications",
+    "rationale": "ActivityKit/Live Activity unavailable; use audio session to keep app alive",
+    "target_ios": "iOS 15.0+"
+  },
+  "background_audio": {
+    "purpose": "Keep app active in background to maintain timer accuracy",
+    "implementation": {
+      "audio_session": {
+        "category": "AVAudioSessionCategoryPlayback",
+        "mode": "AVAudioSessionModeDefault",
+        "options": ["mixWithOthers"],
+        "activation": "When timer starts"
+      },
+      "audio_playback": {
+        "option_1_silent": {
+          "description": "Play silent audio file on loop",
+          "file": "silence.m4a (1 second of silence, looped)",
+          "pros": "Simple, no audio interference",
+          "cons": "Feels like a hack, may be rejected by App Review"
+        },
+        "option_2_ambient": {
+          "description": "Optional ambient workout sounds",
+          "files": ["gym_ambience.m4a", "breathing.m4a"],
+          "user_setting": "Enable background audio toggle in settings",
+          "pros": "Legitimate use of audio, may enhance workout",
+          "cons": "Some users may not want sound"
+        },
+        "recommended": "option_2_ambient with user toggle"
+      },
+      "volume_control": {
+        "default_volume": 0.05,
+        "user_adjustable": true,
+        "respect_silent_switch": false,
+        "note": "Must play audio even if device on silent to maintain background mode"
+      }
+    },
+    "accuracy": {
+      "expected_drift": "≤75ms (same as foreground)",
+      "mechanism": "App continues running with CADisplayLink",
+      "limitation": "System may terminate app under memory pressure"
+    },
+    "battery_impact": {
+      "estimate": "5-10% per hour",
+      "mitigation": "Warn user in settings that background mode uses more battery",
+      "alternative": "Offer 'Background Off' mode that pauses timer when locked"
+    }
+  },
+  "local_notifications": {
+    "purpose": "Alert user to key workout events even if app backgrounded without audio",
+    "events": [
+      {
+        "event": "workout_started",
+        "enabled": false,
+        "rationale": "User just started, notification unnecessary"
+      },
+      {
+        "event": "interval_tick",
+        "enabled": true,
+        "timing": "At start of each EMOM interval",
+        "title": "EMOM Interval {n}",
+        "body": "Starting interval {n} of {total}",
+        "sound": "default",
+        "identifier": "interval_tick"
+      },
+      {
+        "event": "last_minute",
+        "enabled": true,
+        "timing": "60 seconds before AMRAP ends",
+        "title": "1 Minute Remaining",
+        "body": "Push to the finish!",
+        "sound": "default",
+        "identifier": "last_minute_warning"
+      },
+      {
+        "event": "30s_warning",
+        "enabled": true,
+        "timing": "30 seconds before AMRAP ends",
+        "title": "30 Seconds Left",
+        "sound": "default",
+        "identifier": "30s_warning"
+      },
+      {
+        "event": "workout_finished",
+        "enabled": true,
+        "timing": "When timer completes",
+        "title": "Workout Complete!",
+        "body": "Total time: {duration}",
+        "sound": "default",
+        "identifier": "workout_complete"
+      },
+      {
+        "event": "rest_complete",
+        "enabled": true,
+        "timing": "When rest period ends",
+        "title": "Rest Complete",
+        "body": "Starting set {n} of {total}",
+        "sound": "default",
+        "identifier": "rest_complete"
+      }
+    ],
+    "scheduling": {
+      "framework": "UNUserNotificationCenter",
+      "authorization": "Request on first app launch or when starting first workout",
+      "scheduling_strategy": "Schedule all notifications when timer starts, cancel on stop/pause",
+      "update_on_pause": "Cancel pending notifications, reschedule with adjusted times on resume"
+    },
+    "user_settings": {
+      "enable_notifications": true,
+      "notification_events": "Allow user to toggle specific events",
+      "sound": "Use system default or custom sounds (per EVENTS_TO_CUES.md)"
+    },
+    "limitations": {
+      "not_live_updates": "Notifications are pre-scheduled, not real-time updates",
+      "no_countdown_display": "Cannot show live countdown like Live Activity",
+      "banner_only": "User sees banner notification, not persistent lock screen display"
+    }
+  },
+  "lock_screen_experience": {
+    "ios15_behavior": "No persistent timer display on lock screen",
+    "alternatives": [
+      {
+        "method": "Notification badges",
+        "description": "Scheduled notifications appear as banners at key moments",
+        "ux": "Interrupts user with banners, not ideal but functional"
+      },
+      {
+        "method": "Now Playing widget",
+        "description": "If playing background audio, show timer info in Now Playing",
+        "implementation": "MPNowPlayingInfoCenter with elapsed time in title",
+        "example": "\"AMRAP - 12:34 elapsed\"",
+        "pros": "Shows on lock screen control center",
+        "cons": "Unconventional use of Now Playing"
+      }
+    ],
+    "recommended": "Background audio + Now Playing + Local notifications"
+  },
+  "now_playing_integration": {
+    "framework": "MediaPlayer (MPNowPlayingInfoCenter)",
+    "purpose": "Display timer info in lock screen media controls",
+    "implementation": {
+      "title": "{timer_type} Workout",
+      "artist": "Elapsed: {MM:SS}",
+      "album": "Set {n} of {total}",
+      "artwork": "App icon or timer type icon",
+      "update_frequency": "Every 1 second",
+      "playback_rate": 1.0
+    },
+    "example": {
+      "title": "AMRAP Workout",
+      "artist": "Elapsed: 12:34",
+      "album": "Set 2 of 3",
+      "artwork": "AMRAP icon"
+    },
+    "user_experience": {
+      "lock_screen": "Swipe to media controls to see timer info",
+      "control_center": "Shows in Now Playing widget",
+      "limitation": "Not as prominent as Live Activity, requires user action to view"
+    }
+  },
+  "app_lifecycle": {
+    "background_modes": {
+      "required": ["audio"],
+      "info_plist": "UIBackgroundModes = ['audio']",
+      "note": "Enables app to run indefinitely in background while audio playing"
+    },
+    "handling_interruptions": {
+      "phone_call": {
+        "behavior": "Audio session interrupted, timer pauses automatically",
+        "recovery": "Resume timer and audio when interruption ends (AVAudioSessionInterruptionNotification)",
+        "note": "Same as iOS 16+ spec - snap to interval boundary for EMOM"
+      },
+      "alarm_or_siri": {
+        "behavior": "Brief interruption, audio resumes automatically",
+        "timer_behavior": "Continue counting (no pause)"
+      }
+    },
+    "termination_scenarios": {
+      "memory_pressure": {
+        "risk": "System may kill app even with background audio under extreme pressure",
+        "mitigation": "State restoration (same as iOS 16+)",
+        "likelihood": "Low if app is well-optimized"
+      },
+      "background_time_limit": {
+        "risk": "None - audio mode has no time limit",
+        "note": "Unlike background fetch which expires after ~3 minutes"
+      }
+    }
+  },
+  "comparison_to_live_activity": {
+    "live_activity_ios16": {
+      "pros": "Persistent lock screen display, no audio required, modern UX",
+      "cons": "iOS 16.1+ only, excludes iOS 15 users"
+    },
+    "background_audio_ios15": {
+      "pros": "Works on iOS 15, reliable background execution, proven technique",
+      "cons": "Battery drain, audio playing (even if silent), not as elegant UX"
+    },
+    "recommendation": "If supporting iOS 15 is business requirement, use background audio. Otherwise, stick with iOS 16.1+ and Live Activity."
+  },
+  "testing": {
+    "functional_tests": [
+      "Background audio starts when timer starts",
+      "Timer continues accurately while screen locked",
+      "Now Playing shows correct elapsed time",
+      "Local notifications fire at correct times",
+      "Phone call interruption pauses and resumes correctly",
+      "Audio session respects user volume but ignores silent switch"
+    ],
+    "soak_tests": [
+      "20-minute timer with screen locked, verify ≤150ms drift",
+      "Battery usage measurement over 30-minute workout",
+      "Verify app not terminated under normal memory conditions"
+    ],
+    "compatibility_tests": [
+      "iOS 15.0, 15.1, 15.2, etc. across various devices",
+      "Verify background audio on iPhone SE (2020), iPhone 12, iPhone 13"
+    ]
+  },
+  "implementation_notes": {
+    "audio_session_setup": "Configure in AppDelegate or SceneDelegate",
+    "audio_player": "AVAudioPlayer with numberOfLoops = -1 (infinite)",
+    "notification_scheduling": "UNUserNotificationCenter, request authorization early",
+    "now_playing_updates": "Timer.publish every 1 second to update MPNowPlayingInfoCenter",
+    "di_integration": "BackgroundAudioService and NotificationService injected"
+  },
+  "migration_path_to_ios16": {
+    "strategy": "If minimum deployment target raised to iOS 16.1+ later",
+    "steps": [
+      "Replace background audio with Live Activity",
+      "Remove silent audio files from bundle",
+      "Remove AVAudioSession configuration",
+      "Remove MPNowPlayingInfoCenter updates",
+      "Keep local notifications as supplementary feature",
+      "Update UI to remove 'Background Audio' setting"
+    ],
+    "backward_compatibility": {
+      "option": "Check iOS version at runtime",
+      "if_ios16": "Use Live Activity",
+      "if_ios15": "Fall back to background audio",
+      "code": "@available(iOS 16.1, *) check"
+    }
+  }
+}
