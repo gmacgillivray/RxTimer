@@ -21,26 +21,34 @@ struct TimerView: View {
 
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [Color("SecondaryBackground"), Color.black, Color.black],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // PERFORMANCE: Cache gradient backgrounds using .drawingGroup()
+            // This flattens the two full-screen gradients into a single layer,
+            // reducing GPU overhead from 60fps re-rendering
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    colors: [Color("SecondaryBackground"), Color.black, Color.black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-            // Accent glow effect based on timer type
-            RadialGradient(
-                colors: [accentColorForTimerType.opacity(0.15), Color.clear],
-                center: .center,
-                startRadius: 50,
-                endRadius: 400
-            )
-            .ignoresSafeArea()
+                // Accent glow effect based on timer type
+                RadialGradient(
+                    colors: [accentColorForTimerType.opacity(0.15), Color.clear],
+                    center: .center,
+                    startRadius: 50,
+                    endRadius: 400
+                )
+                .ignoresSafeArea()
+            }
+            .drawingGroup() // Flatten gradient layers to optimize rendering
 
-            // Show rest screen or main timer
+            // Show rest screen, countdown, or main timer
             if viewModel.state == .resting {
                 restPeriodView
+            } else if viewModel.state == .countdown {
+                countdownView
             } else {
                 mainTimerView
             }
@@ -94,6 +102,34 @@ struct TimerView: View {
             roundSplits: convertRoundSplitsForDisplay(),
             setDurations: viewModel.getSetDurations()
         )
+    }
+
+    // MARK: - Countdown View
+    private var countdownView: some View {
+        VStack(spacing: 40) {
+            Spacer()
+
+            Text("Get Ready")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .textCase(.uppercase)
+
+            Text(viewModel.countdownText)
+                .font(.system(size: horizontalSizeClass == .regular ? 240 : 120, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [accentColorForTimerType, accentColorForTimerType.opacity(0.8)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .shadow(color: accentColorForTimerType.opacity(0.5), radius: 30, x: 0, y: 0)
+                .accessibilityLabel("Starting in \(viewModel.countdownText) seconds")
+
+            Spacer()
+        }
+        .padding()
     }
 
     // MARK: - Rest Period View
@@ -243,6 +279,32 @@ struct TimerView: View {
                     }
                 }
 
+                // Last round time display (only show after completing at least one round)
+                if let lastSplit = viewModel.lastRoundSplitTime,
+                   viewModel.roundCount > 0,
+                   viewModel.state == .running {
+                    VStack(spacing: 6) {
+                        Text("Last Round")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .textCase(.uppercase)
+
+                        Text(formatTime(lastSplit))
+                            .font(.system(size: lastRoundFontSize, weight: .medium, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(.white.opacity(0.5))
+
+                        // Optional delta indicator
+                        if let delta = viewModel.currentRoundVsLastDelta {
+                            Text(formatDelta(delta))
+                                .font(.system(size: deltaFontSize, weight: .medium))
+                                .foregroundColor(delta > 0 ? .orange : .green)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Last Round: \(formatTime(lastSplit))\(viewModel.currentRoundVsLastDelta.map { ", \(formatDeltaForVoiceOver($0))" } ?? "")")
+                }
+
                 // Round counter button
                 if viewModel.showCounterButton && viewModel.state == .running {
                     Button(action: {
@@ -282,10 +344,25 @@ struct TimerView: View {
                 // Secondary info (set/interval indicators)
                 VStack(spacing: 8) {
                     if viewModel.numSets > 1 {
-                        InfoPill(
-                            icon: "square.stack.3d.up.fill",
-                            text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
-                        )
+                        VStack(spacing: 4) {
+                            // Visual progress dots
+                            HStack(spacing: 6) {
+                                ForEach(1...viewModel.numSets, id: \.self) { setNumber in
+                                    Circle()
+                                        .fill(setNumber <= viewModel.currentSet ? Color.white : Color.white.opacity(0.2))
+                                        .frame(width: 8, height: 8)
+                                }
+                            }
+                            .accessibilityHidden(true) // Text indicator provides the info
+
+                            // Text indicator
+                            InfoPill(
+                                icon: "square.stack.3d.up.fill",
+                                text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
+                            )
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Set \(viewModel.currentSet) of \(viewModel.numSets)")
                     }
 
                     if viewModel.timerType == .emom {
@@ -338,6 +415,63 @@ struct TimerView: View {
         horizontalSizeClass == .regular ? 76 : 38
     }
 
+    private var lastRoundFontSize: CGFloat {
+        // iPad: 53 (28% of 192), iPhone: 28 (29% of 96)
+        horizontalSizeClass == .regular ? 53 : 28
+    }
+
+    private var deltaFontSize: CGFloat {
+        // iPad: 16, iPhone: 12
+        horizontalSizeClass == .regular ? 16 : 12
+    }
+
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(max(0, seconds))
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%02d:%02d", minutes, secs)
+        }
+    }
+
+    private func formatDelta(_ seconds: TimeInterval) -> String {
+        let absSeconds = abs(seconds)
+        let totalSeconds = Int(absSeconds)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+
+        let timeString: String
+        if minutes > 0 {
+            timeString = String(format: "%d:%02d", minutes, secs)
+        } else {
+            timeString = String(format: "0:%02d", secs)
+        }
+
+        return seconds > 0 ? "+\(timeString) slower" : "-\(timeString) faster"
+    }
+
+    private func formatDeltaForVoiceOver(_ seconds: TimeInterval) -> String {
+        let absSeconds = abs(seconds)
+        let totalSeconds = Int(absSeconds)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+
+        var components: [String] = []
+        if minutes > 0 {
+            components.append("\(minutes) minute\(minutes == 1 ? "" : "s")")
+        }
+        if secs > 0 || components.isEmpty {
+            components.append("\(secs) second\(secs == 1 ? "" : "s")")
+        }
+
+        let timeString = components.joined(separator: " ")
+        return seconds > 0 ? "\(timeString) slower" : "\(timeString) faster"
+    }
+
     private func convertRoundSplitsForDisplay() -> [[RoundSplitDisplay]] {
         return viewModel.allRounds.map { setRounds in
             setRounds.map { roundData in
@@ -353,6 +487,8 @@ struct TimerView: View {
         switch viewModel.state {
         case .idle:
             return .gray
+        case .countdown:
+            return .orange
         case .running:
             return .green
         case .paused:
@@ -368,6 +504,8 @@ struct TimerView: View {
         switch viewModel.state {
         case .idle:
             return "Ready"
+        case .countdown:
+            return "Starting"
         case .running:
             return "Running"
         case .paused:
@@ -483,6 +621,7 @@ struct TimerView: View {
     private var buttonLabel: String {
         switch viewModel.state {
         case .idle: return "Start"
+        case .countdown: return "Starting"
         case .running: return "Pause"
         case .paused: return "Resume"
         case .resting: return "Resting"
@@ -553,6 +692,7 @@ struct TimerView: View {
     private var buttonAccessibilityLabel: String {
         switch viewModel.state {
         case .idle: return "Start Timer"
+        case .countdown: return "Workout Starting"
         case .running: return "Pause Timer"
         case .paused: return "Resume Timer"
         case .resting: return "Resting"
@@ -601,4 +741,3 @@ struct RoundedCornerShape: Shape {
         return Path(path.cgPath)
     }
 }
-
