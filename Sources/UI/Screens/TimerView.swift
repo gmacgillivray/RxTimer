@@ -279,31 +279,35 @@ struct TimerView: View {
                     }
                 }
 
-                // Last round time display (only show after completing at least one round)
-                if let lastSplit = viewModel.lastRoundSplitTime,
-                   viewModel.roundCount > 0,
-                   viewModel.state == .running {
+                // Last round time display (always show during running state to prevent layout shift)
+                if viewModel.state == .running {
                     VStack(spacing: 6) {
                         Text("Last Round")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
                             .textCase(.uppercase)
 
-                        Text(formatTime(lastSplit))
+                        Text(viewModel.lastRoundSplitTime.map(formatTime) ?? "––:––")
                             .font(.system(size: lastRoundFontSize, weight: .medium, design: .rounded))
                             .monospacedDigit()
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(viewModel.lastRoundSplitTime != nil ? .white.opacity(0.5) : .white.opacity(0.25))
 
-                        // Optional delta indicator
+                        // Delta indicator or invisible spacer to maintain consistent height
                         if let delta = viewModel.currentRoundVsLastDelta {
                             Text(formatDelta(delta))
                                 .font(.system(size: deltaFontSize, weight: .medium))
                                 .foregroundColor(delta > 0 ? .orange : .green)
+                        } else {
+                            Text(" ")
+                                .font(.system(size: deltaFontSize, weight: .medium))
+                                .opacity(0)
                         }
                     }
                     .padding(.top, -8)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Last Round: \(formatTime(lastSplit))\(viewModel.currentRoundVsLastDelta.map { ", \(formatDeltaForVoiceOver($0))" } ?? "")")
+                    .accessibilityLabel(viewModel.lastRoundSplitTime != nil
+                        ? "Last Round: \(formatTime(viewModel.lastRoundSplitTime!))\(viewModel.currentRoundVsLastDelta.map { ", \(formatDeltaForVoiceOver($0))" } ?? "")"
+                        : "Last Round: No data yet")
                 }
 
                 // Round counter button
