@@ -216,7 +216,7 @@ struct TimerView: View {
 
     // MARK: - Main Timer View
     private var mainTimerView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
                 Spacer()
 
                 // Time display with gradient
@@ -301,6 +301,7 @@ struct TimerView: View {
                                 .foregroundColor(delta > 0 ? .orange : .green)
                         }
                     }
+                    .padding(.top, -8)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Last Round: \(formatTime(lastSplit))\(viewModel.currentRoundVsLastDelta.map { ", \(formatDeltaForVoiceOver($0))" } ?? "")")
                 }
