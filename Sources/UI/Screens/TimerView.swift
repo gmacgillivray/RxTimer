@@ -425,6 +425,30 @@ struct TimerView: View {
         horizontalSizeClass == .regular ? 16 : 12
     }
 
+    // MARK: - Button Sizing (Device Adaptive)
+
+    private var primaryButtonFontSize: CGFloat {
+        horizontalSizeClass == .regular ? 22 : 18
+    }
+
+    private var secondaryButtonFontSize: CGFloat {
+        horizontalSizeClass == .regular ? 20 : 16
+    }
+
+    private var primaryIconSize: CGFloat {
+        horizontalSizeClass == .regular ? 24 : 20
+    }
+
+    private var secondaryIconSize: CGFloat {
+        horizontalSizeClass == .regular ? 20 : 16
+    }
+
+    private var buttonContainerMaxWidth: CGFloat? {
+        // On iPad and landscape, constrain button width to prevent excessive stretching
+        // In portrait iPhone, allow full width
+        horizontalSizeClass == .regular ? 700 : nil
+    }
+
     private func formatTime(_ seconds: TimeInterval) -> String {
         let totalSeconds = Int(max(0, seconds))
         let hours = totalSeconds / 3600
@@ -519,7 +543,7 @@ struct TimerView: View {
 
     // MARK: - Control Buttons
     private var controlButtons: some View {
-        VStack(spacing: 12) {
+        HStack(spacing: 12) {
             // Primary action button (Start/Pause/Resume)
             Button(action: {
                 if viewModel.state == .idle {
@@ -532,9 +556,11 @@ struct TimerView: View {
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: buttonIcon)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: primaryIconSize, weight: .semibold))
                     Text(buttonLabel)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.system(size: primaryButtonFontSize, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
                 .frame(maxWidth: .infinity, minHeight: 60)
                 .background(
@@ -574,11 +600,13 @@ struct TimerView: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: finishButtonIcon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: secondaryIconSize, weight: .semibold))
                     Text(finishButtonLabel)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: secondaryButtonFontSize, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .frame(maxWidth: .infinity, minHeight: 60)
                 .background(
                     RoundedRectangle(cornerRadius: 14)
                         .fill(finishButtonBackground)
@@ -593,6 +621,7 @@ struct TimerView: View {
             .disabled(viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished)
             .opacity((viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished) ? 0.4 : 1)
         }
+        .frame(maxWidth: buttonContainerMaxWidth)
         .padding(.horizontal)
     }
 

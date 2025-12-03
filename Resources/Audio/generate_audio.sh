@@ -43,5 +43,23 @@ say -v Samantha -o end_temp.aiff "Complete" 2>/dev/null
 afconvert -f caff -d LEI16 end_temp.aiff end.caf 2>/dev/null
 rm -f end_temp.aiff
 
+# 7. Create countdown voice files (three, two, one, go)
+echo "Creating countdown audio files..."
+say -v Samantha -r 160 -o three_temp.aiff "Three" 2>/dev/null
+afconvert -f caff -d LEI16 three_temp.aiff three.caf 2>/dev/null
+rm -f three_temp.aiff
+
+say -v Samantha -r 160 -o two_temp.aiff "Two" 2>/dev/null
+afconvert -f caff -d LEI16 two_temp.aiff two.caf 2>/dev/null
+rm -f two_temp.aiff
+
+say -v Samantha -r 160 -o one_temp.aiff "One" 2>/dev/null
+afconvert -f caff -d LEI16 one_temp.aiff one.caf 2>/dev/null
+rm -f one_temp.aiff
+
+say -v Samantha -r 160 -o go_temp.aiff "Go" 2>/dev/null
+afconvert -f caff -d LEI16 go_temp.aiff go.caf 2>/dev/null
+rm -f go_temp.aiff
+
 echo "✅ Audio files generated!"
 ls -lh *.{caf,m4a} 2>/dev/null

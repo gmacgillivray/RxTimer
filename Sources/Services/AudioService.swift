@@ -10,7 +10,7 @@ final class AudioService {
     }
 
     private func preloadSounds() {
-        let sounds = ["start", "tick", "warn", "beep_1hz", "end"]
+        let sounds = ["start", "tick", "warn", "beep_1hz", "end", "three", "two", "one", "go"]
         for sound in sounds {
             guard let url = Bundle.main.url(forResource: sound, withExtension: "caf") else {
                 print("Warning: \(sound).caf not found")

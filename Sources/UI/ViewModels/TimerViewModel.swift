@@ -412,7 +412,15 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             } else {
                 // Other timers: Show elapsed time (throttled)
                 if now.timeIntervalSince(lastTimeTextUpdate) >= textUpdateInterval {
-                    timeText = formatTime(elapsed)
+                    if timerConfiguration.timerType == .emom,
+                       let intervalDuration = timerConfiguration.intervalDurationSeconds {
+                        // EMOM: Show countdown within current interval
+                        let intervalElapsed = elapsed.truncatingRemainder(dividingBy: Double(intervalDuration))
+                        let intervalRemaining = Double(intervalDuration) - intervalElapsed
+                        timeText = formatTime(max(0, intervalRemaining))
+                    } else {
+                        timeText = formatTime(elapsed)
+                    }
                     lastTimeTextUpdate = now
                 }
             }
@@ -542,11 +550,14 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         switch event {
         case "countdown_start":
             audio.play(sound: "start")
-        case "countdown_3", "countdown_2", "countdown_1":
-            // Play actual beep sound (not voice) at 3, 2, 1
-            audio.play(sound: "beep_1hz")
+        case "countdown_3":
+            audio.play(sound: "three")
+        case "countdown_2":
+            audio.play(sound: "two")
+        case "countdown_1":
+            audio.play(sound: "one")
         case "start":
-            audio.play(sound: "start")
+            audio.play(sound: "go")
         case "interval_tick":
             audio.play(sound: "tick")
         case "last_minute", "30s_left":
