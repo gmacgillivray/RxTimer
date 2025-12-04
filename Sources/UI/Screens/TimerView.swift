@@ -345,6 +345,8 @@ struct TimerView: View {
                                 .shadow(color: accentColorForTimerType.opacity(0.3), radius: 15, x: 0, y: 5)
                         )
                     }
+                    .frame(maxWidth: buttonContainerMaxWidth)
+                    .padding(.horizontal)
                     .accessibilityLabel("Tap to complete round \(viewModel.roundCount + 1)")
                 }
 

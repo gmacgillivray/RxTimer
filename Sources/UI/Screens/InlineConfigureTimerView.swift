@@ -1,19 +1,30 @@
 import SwiftUI
 
+private enum PresentationPhase {
+    case configuration
+    case workout
+}
+
 struct InlineConfigureTimerView: View {
     let timerType: TimerType
     let onStart: (TimerConfiguration) -> Void
+    let onWorkoutComplete: (WorkoutSummaryData) -> Void
     let onCancel: () -> Void
 
     @State private var configuration: TimerConfiguration
+    @State private var presentationPhase: PresentationPhase = .configuration
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.presentationMode) private var presentationMode
 
     init(
         timerType: TimerType,
         onStart: @escaping (TimerConfiguration) -> Void,
+        onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.timerType = timerType
         self.onStart = onStart
+        self.onWorkoutComplete = onWorkoutComplete
         self.onCancel = onCancel
 
         // Initialize with appropriate defaults for each timer type
@@ -45,7 +56,7 @@ struct InlineConfigureTimerView: View {
                     // Header
                     VStack(spacing: 8) {
                         Image(systemName: iconName)
-                            .font(.system(size: 60))
+                            .font(.system(size: isCompactWidth ? 60 : 72))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [iconColor, iconColor.opacity(0.7)],
@@ -53,14 +64,18 @@ struct InlineConfigureTimerView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .padding(.top, 40)
+                            .padding(.top, isCompactWidth ? 40 : 24)
 
                         Text("Configure \(timerType.displayName)")
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .font(.system(
+                                size: isCompactWidth ? 32 : 40,
+                                weight: .bold,
+                                design: .rounded
+                            ))
                             .foregroundColor(.white)
 
                         Text(subtitle)
-                            .font(.system(size: 16))
+                            .font(.system(size: isCompactWidth ? 16 : 19))
                             .foregroundColor(.secondary)
                     }
                     .padding(.bottom, 20)
@@ -78,20 +93,31 @@ struct InlineConfigureTimerView: View {
 
                         multiSetSettings
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, horizontalPadding)
+                    .frame(maxWidth: isCompactWidth ? .infinity : 700)
 
                     // Start button
                     Button(action: {
-                        // Simple callback - parent handles navigation
-                        onStart(configuration)
+                        // Save configuration for future use
+                        saveConfiguration()
+
+                        // Present workout directly from this view
+                        presentationPhase = .workout
                     }) {
                         HStack(spacing: 12) {
                             Image(systemName: "play.circle.fill")
-                                .font(.system(size: 24))
+                                .font(.system(size: isCompactWidth ? 24 : 28))
                             Text("Start Workout")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .font(.system(
+                                    size: isCompactWidth ? 20 : 24,
+                                    weight: .bold,
+                                    design: .rounded
+                                ))
                         }
-                        .frame(maxWidth: 400, minHeight: 64)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: isCompactWidth ? 64 : 72
+                        )
                         .background(
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(
@@ -106,6 +132,8 @@ struct InlineConfigureTimerView: View {
                         .foregroundColor(.white)
                     }
                     .padding(.vertical, 30)
+                    .padding(.horizontal, horizontalPadding)
+                    .frame(maxWidth: isCompactWidth ? .infinity : 700)
 
                     Spacer(minLength: 40)
                 }
@@ -113,6 +141,47 @@ struct InlineConfigureTimerView: View {
         }
         .navigationTitle("Configure \(timerType.displayName)")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: Binding(
+            get: { presentationPhase == .workout },
+            set: { if !$0 { handleWorkoutDismissed() } }
+        )) {
+            TimerView(
+                configuration: configuration,
+                restoredState: nil,
+                onWorkoutStateChange: { _ in },
+                onFinish: { summary in
+                    // Dismiss workout and return to config
+                    presentationPhase = .configuration
+
+                    // Notify parent to present summary
+                    onWorkoutComplete(summary)
+
+                    // Dismiss this config view
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+            )
+        }
+    }
+
+    // MARK: - Dismissal Handlers
+
+    private func handleWorkoutDismissed() {
+        // User manually dismissed workout (swipe down on iOS 15+)
+        if presentationPhase == .workout {
+            presentationPhase = .configuration
+        }
+    }
+
+    // MARK: - Configuration Persistence
+
+    private func saveConfiguration() {
+        let key = "LastUsedConfig.\(configuration.timerType.rawValue)"
+        if let data = try? JSONEncoder().encode(configuration) {
+            UserDefaults.standard.set(data, forKey: key)
+            UserDefaults.standard.synchronize()
+        }
     }
 
     private var iconName: String {
@@ -136,6 +205,18 @@ struct InlineConfigureTimerView: View {
         case .forTime: return "Count up with optional time cap"
         case .amrap: return "As Many Rounds As Possible"
         case .emom: return "Every Minute On the Minute"
+        }
+    }
+
+    private var isCompactWidth: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private var horizontalPadding: CGFloat {
+        if isCompactWidth {
+            return 20
+        } else {
+            return max(60, min(120, UIScreen.main.bounds.width * 0.08))
         }
     }
 
@@ -245,7 +326,17 @@ struct InlineConfigureTimerView: View {
                     Label("Number of Sets", systemImage: "square.stack.3d.up.fill")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
 
-                    Stepper(value: $configuration.numSets, in: 1...10) {
+                    Stepper(value: Binding(
+                        get: { configuration.numSets },
+                        set: { newValue in
+                            configuration.numSets = newValue
+
+                            // Auto-initialize rest to 120 seconds when enabling multi-set
+                            if newValue > 1 && configuration.restDurationSeconds == nil {
+                                configuration.restDurationSeconds = 120
+                            }
+                        }
+                    ), in: 1...10) {
                         Text("\(configuration.numSets) \(configuration.numSets == 1 ? "set" : "sets")")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundColor(iconColor)
