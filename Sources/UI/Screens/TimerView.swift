@@ -218,6 +218,7 @@ struct TimerView: View {
     private var mainTimerView: some View {
         VStack(spacing: 20) {
                 Spacer()
+                    .layoutPriority(0.3)
 
                 // Time display with gradient
                 VStack(spacing: 12) {
@@ -379,6 +380,7 @@ struct TimerView: View {
                 }
 
                 Spacer()
+                    .layoutPriority(0.7)
 
                 // Control buttons
                 controlButtons
