@@ -218,7 +218,8 @@ struct TimerView: View {
     private var mainTimerView: some View {
         VStack(spacing: 20) {
                 Spacer()
-                    .layoutPriority(0.3)
+                    .frame(minHeight: 60)
+                    .layoutPriority(0.2)
 
                 // Time display with gradient
                 VStack(spacing: 12) {
@@ -380,7 +381,7 @@ struct TimerView: View {
                 }
 
                 Spacer()
-                    .layoutPriority(0.7)
+                    .layoutPriority(0.8)
 
                 // Control buttons
                 controlButtons
@@ -418,13 +419,13 @@ struct TimerView: View {
     }
 
     private var currentRoundFontSize: CGFloat {
-        // iPad: 76 (40% of 192), iPhone: 38 (40% of 96)
-        horizontalSizeClass == .regular ? 76 : 38
+        // iPad: 64 (33% of 192), iPhone: 32 (33% of 96) - reduced for better spacing
+        horizontalSizeClass == .regular ? 64 : 32
     }
 
     private var lastRoundFontSize: CGFloat {
-        // iPad: 53 (28% of 192), iPhone: 28 (29% of 96)
-        horizontalSizeClass == .regular ? 53 : 28
+        // iPad: 44 (23% of 192), iPhone: 24 (25% of 96) - reduced for better spacing
+        horizontalSizeClass == .regular ? 44 : 24
     }
 
     private var deltaFontSize: CGFloat {
