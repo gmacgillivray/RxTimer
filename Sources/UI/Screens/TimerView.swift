@@ -83,11 +83,19 @@ struct TimerView: View {
             let isActive = newState != .idle && newState != .finished
             onWorkoutStateChange?(isActive)
 
+            // Prevent screen from sleeping during active workouts
+            // Enable idle timer only when idle or finished to allow normal sleep behavior
+            UIApplication.shared.isIdleTimerDisabled = (newState != .idle && newState != .finished)
+
             // When workout finishes, create summary data and call callback
             if newState == .finished {
                 let summaryData = createSummaryData(wasCompleted: true)
                 onFinish?(summaryData)
             }
+        }
+        .onDisappear {
+            // Re-enable idle timer when view disappears to restore normal behavior
+            UIApplication.shared.isIdleTimerDisabled = false
         }
     }
 
