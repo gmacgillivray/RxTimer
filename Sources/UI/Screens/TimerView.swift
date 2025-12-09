@@ -216,9 +216,9 @@ struct TimerView: View {
 
     // MARK: - Main Timer View
     private var mainTimerView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: contentSpacing) {
                 Spacer()
-                    .frame(minHeight: 60)
+                    .frame(minHeight: topSpacerMinHeight)
                     .layoutPriority(0.2)
 
                 // Time display with gradient
@@ -389,7 +389,7 @@ struct TimerView: View {
                 controlButtons
 
                 Spacer()
-                    .frame(height: 50)
+                    .frame(height: bottomSpacerHeight)
             }
             .padding()
     }
@@ -433,6 +433,25 @@ struct TimerView: View {
     private var deltaFontSize: CGFloat {
         // iPad: 16, iPhone: 12
         horizontalSizeClass == .regular ? 16 : 12
+    }
+
+    // MARK: - Layout Spacing (Device & Timer-Type Adaptive)
+
+    private var contentSpacing: CGFloat {
+        // EMOM has additional vertical content (interval indicator)
+        // requiring tighter spacing on smaller iPads to prevent overflow
+        viewModel.timerType == .emom ? 16 : 20
+    }
+
+    private var bottomSpacerHeight: CGFloat {
+        // Minimum bottom padding to keep controls in thumb zone
+        // Increased for EMOM due to denser content stack
+        viewModel.timerType == .emom ? 70 : 50
+    }
+
+    private var topSpacerMinHeight: CGFloat {
+        // Reduced top spacer for EMOM to accommodate content density
+        viewModel.timerType == .emom ? 40 : 60
     }
 
     // MARK: - Button Sizing (Device Adaptive)
