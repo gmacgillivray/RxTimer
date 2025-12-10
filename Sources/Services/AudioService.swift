@@ -19,18 +19,7 @@ final class AudioService {
     }
 
     private func preloadSounds() {
-        // Only preload non-system sounds
-        let sounds = ["start", "tick", "warn", "beep_1hz", "end"]
-        for sound in sounds {
-            guard let url = Bundle.main.url(forResource: sound, withExtension: "caf") else {
-                print("Warning: \(sound).caf not found")
-                continue
-            }
-            if let player = try? AVAudioPlayer(contentsOf: url) {
-                player.prepareToPlay()
-                players[sound] = player
-            }
-        }
+        // All sounds now use iOS system sounds - no audio files needed
     }
 
     func play(sound: String) {

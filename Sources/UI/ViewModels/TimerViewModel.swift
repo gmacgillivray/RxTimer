@@ -544,8 +544,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
     private func playAudioForEvent(_ event: String) {
         switch event {
-        case "countdown_start":
-            audio.play(sound: "start")
         case "countdown_3":
             audio.play(sound: "three")
         case "countdown_2":
@@ -554,20 +552,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             audio.play(sound: "one")
         case "start":
             audio.play(sound: "go")
-        case "interval_tick":
-            audio.play(sound: "tick")
-        case "last_minute", "30s_left":
-            audio.play(sound: "warn")
-        case "countdown_10s":
-            audio.play(sound: "beep_1hz")
-        case "finish":
-            audio.play(sound: "end")
-        case "set_complete":
-            audio.play(sound: "end") // Set completed
-        case "rest_start":
-            audio.play(sound: "end") // Rest period starting
-        case "set_start":
-            audio.play(sound: "start") // New set starting
         default:
             break
         }
