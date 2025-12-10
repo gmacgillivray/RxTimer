@@ -41,7 +41,6 @@
 		D23D021AC1C7ACCF69813CD0 /* tick.caf in Resources */ = {isa = PBXBuildFile; fileRef = 896BB817599A464357C85456 /* tick.caf */; };
 		D38CC199FFB1E18CD4297A8A /* three.caf in Resources */ = {isa = PBXBuildFile; fileRef = 5C1E02DE0C8780DD41613146 /* three.caf */; };
 		D61F0122ACE53A12CE8825E0 /* TimerTypeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE5E181EC4B2C8C3F7B5AA3 /* TimerTypeCard.swift */; };
-		DD160BA7192BB85C7D6E09A4 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC721223F4FDB565AD0CFE09 /* NotificationService.swift */; };
 		E7629DD7187933487ABA2A9C /* three.caf in Resources */ = {isa = PBXBuildFile; fileRef = 5C1E02DE0C8780DD41613146 /* three.caf */; };
 		E7C30D9E6765F8723EF0D854 /* AudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6775CB8C0A32B833AE93D25B /* AudioService.swift */; };
 		E955C7550F142E811C73E9AB /* beep_1hz.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3CEF841D69CC8188B302F4E0 /* beep_1hz.caf */; };
@@ -110,7 +109,6 @@
 		E6A367A1FF4E683760EA7F4C /* WorkoutDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutDetailView.swift; path = Sources/UI/Screens/WorkoutDetailView.swift; sourceTree = "<group>"; };
 		E9C2B90A5DCA5D29F2BEC039 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EA9B0544F3076DC41F707808 /* TimerTypeCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerTypeCard.swift; path = Sources/UI/Components/TimerTypeCard.swift; sourceTree = "<group>"; };
-		EC721223F4FDB565AD0CFE09 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		F25A0AD4E0D30B15C17819A5 /* silence.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = silence.m4a; sourceTree = "<group>"; };
 		F25B605ED1FF3384317A3E8A /* WorkoutSummaryContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryContentView.swift; sourceTree = "<group>"; };
 		F39E34AF23906125A657213F /* WorkoutDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutDetailView.swift; sourceTree = "<group>"; };
@@ -267,7 +265,6 @@
 				6775CB8C0A32B833AE93D25B /* AudioService.swift */,
 				37AC499A71F680300B57EF4C /* BackgroundAudioService.swift */,
 				FD434AD686CA9B1E19061636 /* HapticService.swift */,
-				EC721223F4FDB565AD0CFE09 /* NotificationService.swift */,
 				4492CB260A00D2BBEB917DB1 /* WorkoutStateManager.swift */,
 				2317A3EAFCC9FF6CC1538FFD /* WorkoutStateManager.swift */,
 			);
@@ -548,7 +545,6 @@
 				E7C30D9E6765F8723EF0D854 /* AudioService.swift in Sources */,
 				601B543EC4D0C9E6365672B1 /* BackgroundAudioService.swift in Sources */,
 				F69860CE6F8C05E818EB17D3 /* HapticService.swift in Sources */,
-				DD160BA7192BB85C7D6E09A4 /* NotificationService.swift in Sources */,
 				31275AF3653FEEC5C93939B9 /* WorkoutStateManager.swift in Sources */,
 				3B6F26CF8F73E202F0916265 /* BigTimeDisplay.swift in Sources */,
 				D61F0122ACE53A12CE8825E0 /* TimerTypeCard.swift in Sources */,

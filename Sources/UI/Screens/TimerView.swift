@@ -76,9 +76,6 @@ struct TimerView: View {
                 .accessibilityHidden(viewModel.state == .idle)
             }
         }
-        .onAppear {
-            NotificationService.shared.requestAuthorization()
-        }
         .onChange(of: viewModel.state) { newState in
             let isActive = newState != .idle && newState != .finished
             onWorkoutStateChange?(isActive)

@@ -42,7 +42,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     private let backgroundAudio = BackgroundAudioService.shared
     private let haptics = HapticService.shared
     private let audio = AudioService.shared
-    private let notifications = NotificationService.shared
     private let stateManager = WorkoutStateManager.shared
     private var workoutState: WorkoutState
     private var cancellables = Set<AnyCancellable>()
@@ -149,7 +148,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         if state == .idle {
             workoutState.startTimestamp = Date()
             workoutState.state = .running
-            notifications.scheduleWorkoutNotifications(configuration: timerConfiguration, startTime: Date())
             backgroundAudio.start()
             startAutosave()
         }
@@ -174,7 +172,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     func resetTapped() {
         engine.reset()
         backgroundAudio.stop()
-        notifications.cancelAllNotifications()
         backgroundAudio.clearNowPlaying()
         stopAutosave()
         clearSavedState()
@@ -204,7 +201,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         // when engine.finish() changes the state. Don't save here to avoid duplicates.
         engine.finish()
         backgroundAudio.stop()
-        notifications.cancelAllNotifications()
         backgroundAudio.clearNowPlaying()
         stopAutosave()
     }

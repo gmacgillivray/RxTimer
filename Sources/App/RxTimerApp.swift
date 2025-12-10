@@ -8,9 +8,6 @@ struct RxTimerApp: App {
         // Migrate old UserDefaults keys from Quick Start to LastUsedConfig
         migrateUserDefaultsKeys()
 
-        // Request notification permissions on launch
-        NotificationService.shared.requestAuthorization()
-
         // Configure app appearance
         configureAppearance()
     }
