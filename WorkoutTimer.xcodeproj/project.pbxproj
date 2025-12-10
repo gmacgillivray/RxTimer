@@ -65,7 +65,7 @@
 /* Begin PBXFileReference section */
 		0566BAE9E6F7E33845ACC0BC /* TimerSelectionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerSelectionViewModel.swift; path = Sources/UI/ViewModels/TimerSelectionViewModel.swift; sourceTree = "<group>"; };
 		0BC0385396CA0989DC979712 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryView.swift; sourceTree = "<group>"; };
-		0CB8ABF5FBA40AB5F5CDFD49 /* go.caf */ = {isa = PBXFileReference; includeInIndex = 1; name = go.caf; path = go.caf; sourceTree = "<group>"; };
+		0CB8ABF5FBA40AB5F5CDFD49 /* go.caf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = go.caf; sourceTree = "<group>"; };
 		0FC7AC7E6F0263F1B2F51CE4 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutSummaryView.swift; path = Sources/UI/Screens/WorkoutSummaryView.swift; sourceTree = "<group>"; };
 		12F890DA07FF7BD90FA8B772 /* QuickStartConfirmationSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = QuickStartConfirmationSheet.swift; path = Sources/UI/Components/QuickStartConfirmationSheet.swift; sourceTree = "<group>"; };
 		195F9293022CEE80C9E8D0C0 /* WorkoutTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WorkoutTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,7 +83,7 @@
 		4492CB260A00D2BBEB917DB1 /* WorkoutStateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutStateManager.swift; path = Sources/Services/WorkoutStateManager.swift; sourceTree = "<group>"; };
 		51570F093954B65F706F7C19 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		56257AB8AEC0E93AE14629CB /* TimerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerState.swift; sourceTree = "<group>"; };
-		5C1E02DE0C8780DD41613146 /* three.caf */ = {isa = PBXFileReference; includeInIndex = 1; name = three.caf; path = three.caf; sourceTree = "<group>"; };
+		5C1E02DE0C8780DD41613146 /* three.caf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = three.caf; sourceTree = "<group>"; };
 		65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LongDurationTimingTests.swift; path = Tests/DomainTests/LongDurationTimingTests.swift; sourceTree = "<group>"; };
 		6775CB8C0A32B833AE93D25B /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
 		6888E08EA1AD4E654D5C5308 /* TimingDriftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimingDriftTests.swift; sourceTree = "<group>"; };
@@ -94,9 +94,9 @@
 		8988304F814D9BE38F446969 /* WorkoutHistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryView.swift; sourceTree = "<group>"; };
 		9779E4C91E2994381C7C8F47 /* TimerTypeCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerTypeCard.swift; path = Sources/UI/Components/TimerTypeCard.swift; sourceTree = "<group>"; };
 		9B898728DEE1BC31BA0BD391 /* warn.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = warn.caf; sourceTree = "<group>"; };
-		A297C579702340446E35DD19 /* two.caf */ = {isa = PBXFileReference; includeInIndex = 1; name = two.caf; path = two.caf; sourceTree = "<group>"; };
+		A297C579702340446E35DD19 /* two.caf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = two.caf; sourceTree = "<group>"; };
 		B21E5E7D26EBC245A348AB77 /* TimerSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimerSelectionView.swift; sourceTree = "<group>"; };
-		B2ADF3A433A4071813BF2B4C /* one.caf */ = {isa = PBXFileReference; includeInIndex = 1; name = one.caf; path = one.caf; sourceTree = "<group>"; };
+		B2ADF3A433A4071813BF2B4C /* one.caf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = one.caf; sourceTree = "<group>"; };
 		B91E87E1E58959B191C6AA36 /* WorkoutHistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutHistoryView.swift; path = Sources/UI/Screens/WorkoutHistoryView.swift; sourceTree = "<group>"; };
 		BE2A76547EB23108DECD6D01 /* StateRestorationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StateRestorationTests.swift; path = Tests/DomainTests/StateRestorationTests.swift; sourceTree = "<group>"; };
 		C03E2F0139BBB5F41F52E447 /* TimerSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerSelectionView.swift; path = Sources/UI/Screens/TimerSelectionView.swift; sourceTree = "<group>"; };
@@ -170,7 +170,6 @@
 				A8BFB4AB41C9CF0256C75824 /* Components */,
 				9D901944C514B5BB610F993B /* ViewModels */,
 			);
-			name = UI;
 			path = UI;
 			sourceTree = "<group>";
 		};
@@ -179,7 +178,6 @@
 			children = (
 				DAF4308A63E801A40E58AB5C /* TimerSelectionView.swift */,
 			);
-			name = Screens;
 			path = Screens;
 			sourceTree = "<group>";
 		};
@@ -281,7 +279,6 @@
 			children = (
 				E3F657CC770C0B1CBF085AED /* TimerSelectionViewModel.swift */,
 			);
-			name = ViewModels;
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
@@ -291,7 +288,6 @@
 				EA9B0544F3076DC41F707808 /* TimerTypeCard.swift */,
 				372AB8FBBFC55BBEE0F926E7 /* QuickStartConfirmationSheet.swift */,
 			);
-			name = Components;
 			path = Components;
 			sourceTree = "<group>";
 		};
@@ -382,7 +378,6 @@
 			children = (
 				65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */,
 			);
-			name = DomainTests;
 			path = DomainTests;
 			sourceTree = "<group>";
 		};
@@ -591,9 +586,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = UY2LY9YDPT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RxTimer;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -605,7 +603,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.WorkoutTimer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.foursummits.RxTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -775,9 +773,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = UY2LY9YDPT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RxTimer;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -789,7 +790,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.WorkoutTimer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.foursummits.RxTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

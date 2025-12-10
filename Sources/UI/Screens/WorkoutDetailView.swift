@@ -3,7 +3,7 @@ import CoreData
 
 struct WorkoutDetailView: View {
     let workout: Workout
-    let onDismiss: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -21,7 +21,7 @@ struct WorkoutDetailView: View {
 
                 // Done button
                 Button(action: {
-                    onDismiss()
+                    dismiss()
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle")

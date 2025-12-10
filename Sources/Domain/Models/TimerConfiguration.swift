@@ -49,10 +49,10 @@ public struct TimerConfiguration: Codable, Equatable {
     }
 }
 
-// MARK: - Quick Start Defaults
+// MARK: - Configuration Defaults
 extension TimerConfiguration {
-    /// Returns default configuration for Quick Start feature
-    static func defaultQuickStart(for timerType: TimerType) -> TimerConfiguration {
+    /// Returns default configuration for a timer type
+    static func defaultConfiguration(for timerType: TimerType) -> TimerConfiguration {
         switch timerType {
         case .amrap:
             return TimerConfiguration(
@@ -78,52 +78,32 @@ extension TimerConfiguration {
             )
         }
     }
-
-    /// Returns accessibility description for VoiceOver
-    func quickStartAccessibilityDescription() -> String {
-        switch timerType {
-        case .amrap:
-            let minutes = (durationSeconds ?? 600) / 60
-            return "Quick Start AMRAP, \(minutes) minutes"
-        case .emom:
-            let intervals = numIntervals ?? 10
-            let seconds = intervalDurationSeconds ?? 60
-            return "Quick Start EMOM, \(intervals) intervals of \(seconds) seconds"
-        case .forTime:
-            if let cap = timeCapSeconds {
-                let minutes = cap / 60
-                return "Quick Start For Time, \(minutes) minute cap"
-            } else {
-                return "Quick Start For Time, no time cap"
-            }
-        }
-    }
 }
 
 // MARK: - Configuration Provider Protocol
 /// Protocol for providing timer configurations (supports testing and flexibility)
 protocol ConfigurationProvider {
-    func quickStartConfiguration(for timerType: TimerType) -> TimerConfiguration
+    func configuration(for timerType: TimerType) -> TimerConfiguration
     func saveConfiguration(_ config: TimerConfiguration)
 }
 
 extension ConfigurationProvider {
-    /// Gets smart default configuration: last used if available, otherwise default
-    func quickStartConfiguration(for timerType: TimerType) -> TimerConfiguration {
+    /// Gets last used configuration if available, otherwise returns default
+    func configuration(for timerType: TimerType) -> TimerConfiguration {
         // Try to load last used configuration from UserDefaults
-        let key = "QuickStart.LastConfig.\(timerType.rawValue)"
+        let key = "LastUsedConfig.\(timerType.rawValue)"
         if let data = UserDefaults.standard.data(forKey: key),
            let config = try? JSONDecoder().decode(TimerConfiguration.self, from: data) {
             return config
         }
 
         // Fallback to defaults
-        return TimerConfiguration.defaultQuickStart(for: timerType)
+        return TimerConfiguration.defaultConfiguration(for: timerType)
     }
 
-    /// Saves configuration for future Quick Start usage
+    /// Saves configuration for future use
     func saveConfiguration(_ config: TimerConfiguration) {
-        let key = "QuickStart.LastConfig.\(config.timerType.rawValue)"
+        let key = "LastUsedConfig.\(config.timerType.rawValue)"
         if let data = try? JSONEncoder().encode(config) {
             UserDefaults.standard.set(data, forKey: key)
         }

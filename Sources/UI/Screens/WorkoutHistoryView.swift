@@ -3,6 +3,7 @@ import CoreData
 
 struct WorkoutHistoryView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Workout.timestamp, ascending: false)],
         animation: .default)
@@ -28,6 +29,20 @@ struct WorkoutHistoryView: View {
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                        Text("Close")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                }
+                .accessibilityLabel("Close history")
+            }
+        }
         .preferredColorScheme(.dark)
     }
 
@@ -36,12 +51,9 @@ struct WorkoutHistoryView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(workouts) { workout in
-                    Button(action: {
-                        onSelectWorkout(workout)
-                    }) {
+                    NavigationLink(destination: WorkoutDetailView(workout: workout)) {
                         WorkoutHistoryRow(workout: workout)
                     }
-                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             deleteWorkout(workout)

@@ -19,7 +19,7 @@ enum AppNavigationState: Equatable {
     case history
 
     /// Viewing specific workout detail from history
-    case historyDetail(Workout)
+    case historyDetail(id: UUID)
 
     static func == (lhs: AppNavigationState, rhs: AppNavigationState) -> Bool {
         switch (lhs, rhs) {
@@ -33,8 +33,8 @@ enum AppNavigationState: Equatable {
             return lhsData == rhsData
         case (.history, .history):
             return true
-        case (.historyDetail(let lhsWorkout), .historyDetail(let rhsWorkout)):
-            return lhsWorkout.id == rhsWorkout.id
+        case (.historyDetail(let lhsID), .historyDetail(let rhsID)):
+            return lhsID == rhsID
         default:
             return false
         }
@@ -43,7 +43,7 @@ enum AppNavigationState: Equatable {
 
 // MARK: - Workout Summary Data
 /// Contains all data needed to display workout summary
-struct WorkoutSummaryData: Equatable {
+struct WorkoutSummaryData: Equatable, Identifiable {
     let id: UUID
     let configuration: TimerConfiguration
     let duration: TimeInterval
@@ -52,6 +52,7 @@ struct WorkoutSummaryData: Equatable {
     let wasCompleted: Bool
     let roundSplits: [[RoundSplitDisplay]]
     let setDurations: [SetDuration]
+    let timestamp: Date
 
     init(
         id: UUID = UUID(),
@@ -61,7 +62,8 @@ struct WorkoutSummaryData: Equatable {
         roundCount: Int,
         wasCompleted: Bool,
         roundSplits: [[RoundSplitDisplay]],
-        setDurations: [SetDuration] = []
+        setDurations: [SetDuration] = [],
+        timestamp: Date = Date()
     ) {
         self.id = id
         self.configuration = configuration
@@ -71,6 +73,7 @@ struct WorkoutSummaryData: Equatable {
         self.wasCompleted = wasCompleted
         self.roundSplits = roundSplits
         self.setDurations = setDurations
+        self.timestamp = timestamp
     }
 }
 
@@ -85,7 +88,7 @@ extension WorkoutSummaryData: WorkoutSummaryDisplayData {
     }
 
     var date: Date? {
-        nil // Just-completed workouts don't show date
+        timestamp
     }
 
     var roundSplitSets: [[WorkoutRoundSplit]] {

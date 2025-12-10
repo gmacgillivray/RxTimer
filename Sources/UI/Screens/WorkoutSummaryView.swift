@@ -20,6 +20,18 @@ struct WorkoutSummaryView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Custom header (replaces navigation bar for full-screen presentation)
+                HStack {
+                    Spacer()
+                    Text("Workout Summary")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .accessibilityAddTraits(.isHeader)
+
                 // Shared content
                 WorkoutSummaryContentView(data: data, showDate: false)
 
@@ -54,9 +66,6 @@ struct WorkoutSummaryView: View {
                 .padding()
             }
         }
-        .navigationTitle("Workout Summary")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
         .preferredColorScheme(.dark)
     }
 

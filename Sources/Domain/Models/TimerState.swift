@@ -2,6 +2,7 @@ import Foundation
 
 public enum TimerState: String, Codable {
     case idle
+    case countdown
     case running
     case paused
     case resting

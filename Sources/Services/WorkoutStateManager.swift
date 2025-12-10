@@ -34,6 +34,12 @@ final class WorkoutStateManager {
             decoder.dateDecodingStrategy = .iso8601
             let state = try decoder.decode(WorkoutState.self, from: data)
 
+            // Don't restore countdown states - they're transient and meaningless after app restart
+            if state.state == .countdown {
+                clearState()
+                return nil
+            }
+
             // Check if state has expired (older than 1 hour)
             let age = Date().timeIntervalSince(state.lastUpdateTimestamp)
             if age >= expiryDuration {

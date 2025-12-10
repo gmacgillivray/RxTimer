@@ -1,7 +1,6 @@
 import Foundation
 import CoreData
 
-// MARK: - WorkoutSummaryDisplayData Conformance
 extension Workout: WorkoutSummaryDisplayData {
     // timerType and totalDurationSeconds already exist on Workout entity
 
