@@ -339,8 +339,9 @@ public final class TimerEngine {
         let remaining = max(0, countdownDuration - elapsed)
 
         // Emit beep events only at 3, 2, and 1
-        let currentSecond = Int(remaining)
-        let previousSecond = Int(countdownRemaining)
+        // Use ceil() to align beeps with display (beep when crossing 3.0, 2.0, 1.0)
+        let currentSecond = Int(ceil(remaining))
+        let previousSecond = Int(ceil(countdownRemaining))
         if currentSecond != previousSecond {
             if currentSecond == 3 || currentSecond == 2 || currentSecond == 1 {
                 delegate?.timerDidEmit(event: "countdown_\(currentSecond)")
@@ -401,15 +402,16 @@ public final class TimerEngine {
         let restRemaining = Double(restDuration) - restElapsed
 
         // Emit countdown sounds at 3, 2, 1 seconds before rest ends
-        if restRemaining <= 3.0 && restRemaining > 2.9 && !restCountdown3Emitted {
+        // Use ceil() to align beeps with display
+        let currentSecond = Int(ceil(restRemaining))
+
+        if currentSecond == 3 && !restCountdown3Emitted {
             restCountdown3Emitted = true
             delegate?.timerDidEmit(event: "countdown_3")
-        }
-        if restRemaining <= 2.0 && restRemaining > 1.9 && !restCountdown2Emitted {
+        } else if currentSecond == 2 && !restCountdown2Emitted {
             restCountdown2Emitted = true
             delegate?.timerDidEmit(event: "countdown_2")
-        }
-        if restRemaining <= 1.0 && restRemaining > 0.9 && !restCountdown1Emitted {
+        } else if currentSecond == 1 && !restCountdown1Emitted {
             restCountdown1Emitted = true
             delegate?.timerDidEmit(event: "countdown_1")
         }
@@ -445,15 +447,16 @@ public final class TimerEngine {
         let timeUntilNextInterval = Double(intervalDuration) - timeInCurrentInterval
 
         // Emit countdown sounds at 3, 2, 1 seconds before interval transition
-        if timeUntilNextInterval <= 3.0 && timeUntilNextInterval > 2.9 && !emomCountdown3Emitted && currentInterval < numIntervals {
+        // Use ceil() to align beeps with display
+        let currentSecond = Int(ceil(timeUntilNextInterval))
+
+        if currentSecond == 3 && !emomCountdown3Emitted && currentInterval < numIntervals {
             emomCountdown3Emitted = true
             delegate?.timerDidEmit(event: "countdown_3")
-        }
-        if timeUntilNextInterval <= 2.0 && timeUntilNextInterval > 1.9 && !emomCountdown2Emitted && currentInterval < numIntervals {
+        } else if currentSecond == 2 && !emomCountdown2Emitted && currentInterval < numIntervals {
             emomCountdown2Emitted = true
             delegate?.timerDidEmit(event: "countdown_2")
-        }
-        if timeUntilNextInterval <= 1.0 && timeUntilNextInterval > 0.9 && !emomCountdown1Emitted && currentInterval < numIntervals {
+        } else if currentSecond == 1 && !emomCountdown1Emitted && currentInterval < numIntervals {
             emomCountdown1Emitted = true
             delegate?.timerDidEmit(event: "countdown_1")
         }
