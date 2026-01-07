@@ -4,6 +4,7 @@ import UIKit
 struct TimerView: View {
     @StateObject private var viewModel: TimerViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @State private var showDetails: Bool = true
 
     let onWorkoutStateChange: ((Bool) -> Void)?
     let onFinish: ((WorkoutSummaryData) -> Void)?
@@ -122,14 +123,7 @@ struct TimerView: View {
             Text(viewModel.countdownText)
                 .font(.system(size: horizontalSizeClass == .regular ? 240 : 120, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [accentColorForTimerType, accentColorForTimerType.opacity(0.8)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .shadow(color: accentColorForTimerType.opacity(0.5), radius: 30, x: 0, y: 0)
+                .foregroundColor(accentColorForTimerType)
                 .accessibilityLabel("Starting in \(viewModel.countdownText) seconds")
 
             Spacer()
@@ -162,14 +156,7 @@ struct TimerView: View {
             Text(viewModel.restTimeText)
                 .font(.system(size: restTimerFontSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.blue, .blue.opacity(0.8)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .shadow(color: .blue.opacity(0.5), radius: 30, x: 0, y: 0)
+                .foregroundColor(.blue)
                 .accessibilityLabel("Rest Time Remaining: \(viewModel.restTimeText)")
 
             // Set indicator
@@ -231,14 +218,7 @@ struct TimerView: View {
                     Text(viewModel.timeText)
                         .font(.system(size: mainTimerFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.white, .white.opacity(0.9)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .shadow(color: accentColorForTimerType.opacity(0.3), radius: 20, x: 0, y: 0)
+                        .foregroundColor(.white)
                         .opacity(viewModel.state == .idle ? 0.6 : 1.0)
                         .saturation(viewModel.state == .idle ? 0.7 : 1.0)
                         .accessibilityLabel(viewModel.timerType == .amrap ? "Time Remaining: \(viewModel.timeText)" : "Elapsed Time: \(viewModel.timeText)")
@@ -254,70 +234,80 @@ struct TimerView: View {
                             .textCase(.uppercase)
                     }
                 }
-
-                // Elapsed time display (AMRAP only)
-                if viewModel.timerType == .amrap && viewModel.state == .running {
-                    VStack(spacing: 6) {
-                        Text("Elapsed Time")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .textCase(.uppercase)
-
-                        Text(viewModel.elapsedTimeText)
-                            .font(.system(size: elapsedTimeFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(.white.opacity(0.7))
-                            .accessibilityLabel("Elapsed Time: \(viewModel.elapsedTimeText)")
+                .contentShape(Rectangle()) // Make entire area tappable
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showDetails.toggle()
                     }
                 }
+                .accessibilityHint("Double tap to toggle detailed statistics")
 
-                // Current round time display
-                if viewModel.state == .running {
-                    VStack(spacing: 6) {
-                        Text("Current Round")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .textCase(.uppercase)
+                if showDetails {
+                    // Elapsed time display (AMRAP only)
+                    if viewModel.timerType == .amrap && viewModel.state == .running {
+                        VStack(spacing: 6) {
+                            Text("Elapsed Time")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                                .textCase(.uppercase)
 
-                        Text(viewModel.currentRoundTimeText)
-                            .font(.system(size: currentRoundFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(accentColorForTimerType)
-                    }
-                }
-
-                // Last round time display (always show during running state to prevent layout shift)
-                if viewModel.state == .running {
-                    VStack(spacing: 6) {
-                        Text("Last Round")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .textCase(.uppercase)
-
-                        Text(viewModel.lastRoundSplitTime.map(formatTime) ?? "––:––")
-                            .font(.system(size: lastRoundFontSize, weight: .medium, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(viewModel.lastRoundSplitTime != nil ? .white.opacity(0.5) : .white.opacity(0.25))
-
-                        // Delta indicator or invisible spacer to maintain consistent height
-                        if let delta = viewModel.currentRoundVsLastDelta {
-                            Text(formatDelta(delta))
-                                .font(.system(size: deltaFontSize, weight: .medium))
-                                .foregroundColor(delta > 0 ? .orange : .green)
-                        } else {
-                            Text(" ")
-                                .font(.system(size: deltaFontSize, weight: .medium))
-                                .opacity(0)
+                            Text(viewModel.elapsedTimeText)
+                                .font(.system(size: elapsedTimeFontSize, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(.white.opacity(0.7))
+                                .accessibilityLabel("Elapsed Time: \(viewModel.elapsedTimeText)")
                         }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-                    .padding(.top, -8)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(viewModel.lastRoundSplitTime != nil
-                        ? "Last Round: \(formatTime(viewModel.lastRoundSplitTime!))\(viewModel.currentRoundVsLastDelta.map { ", \(formatDeltaForVoiceOver($0))" } ?? "")"
-                        : "Last Round: No data yet")
+
+                    // Pacing Stats (Current vs Last Round)
+                    if viewModel.state == .running {
+                        HStack(spacing: 50) {
+                            // Current Round Column
+                            VStack(spacing: 6) {
+                                Text("Current Round")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+
+                                Text(viewModel.currentRoundTimeText)
+                                    .font(.system(size: currentRoundFontSize, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundColor(accentColorForTimerType)
+                            }
+
+                            // Last Round Column
+                            VStack(spacing: 6) {
+                                Text("Last Round")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+
+                                Text(viewModel.lastRoundSplitTime.map(formatTime) ?? "––:––")
+                                    .font(.system(size: lastRoundFontSize, weight: .medium, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundColor(viewModel.lastRoundSplitTime != nil ? .white.opacity(0.8) : .white.opacity(0.4))
+
+                                // Delta indicator
+                                if let delta = viewModel.currentRoundVsLastDelta {
+                                    Text(formatDelta(delta))
+                                        .font(.system(size: deltaFontSize, weight: .medium))
+                                        .foregroundColor(delta > 0 ? .orange : .green)
+                                } else {
+                                    Text(" ")
+                                        .font(.system(size: deltaFontSize, weight: .medium))
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .padding(.top, -6)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Pacing: Current Round \(viewModel.currentRoundTimeText). Last Round \(viewModel.lastRoundSplitTime.map(formatTime) ?? "None"). \(viewModel.currentRoundVsLastDelta.map { diff in diff > 0 ? "\(formatDeltaForVoiceOver(diff)) slower" : "\(formatDeltaForVoiceOver(diff)) faster" } ?? "")")
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
 
-                // Round counter button
+                // Round counter button (Always shown to allow round tracking)
                 if viewModel.showCounterButton && viewModel.state == .running {
                     Button(action: {
                         viewModel.completeRound()
@@ -355,36 +345,39 @@ struct TimerView: View {
                     .accessibilityLabel("Tap to complete round \(viewModel.roundCount + 1)")
                 }
 
-                // Secondary info (set/interval indicators)
-                VStack(spacing: 8) {
-                    if viewModel.numSets > 1 {
-                        VStack(spacing: 4) {
-                            // Visual progress dots
-                            HStack(spacing: 6) {
-                                ForEach(1...viewModel.numSets, id: \.self) { setNumber in
-                                    Circle()
-                                        .fill(setNumber <= viewModel.currentSet ? Color.white : Color.white.opacity(0.2))
-                                        .frame(width: 8, height: 8)
+                if showDetails {
+                    // Secondary info (set/interval indicators)
+                    VStack(spacing: 8) {
+                        if viewModel.numSets > 1 {
+                            VStack(spacing: 4) {
+                                // Visual progress dots
+                                HStack(spacing: 6) {
+                                    ForEach(1...viewModel.numSets, id: \.self) { setNumber in
+                                        Circle()
+                                            .fill(setNumber <= viewModel.currentSet ? Color.white : Color.white.opacity(0.2))
+                                            .frame(width: 8, height: 8)
+                                    }
                                 }
-                            }
-                            .accessibilityHidden(true) // Text indicator provides the info
+                                .accessibilityHidden(true) // Text indicator provides the info
 
-                            // Text indicator
+                                // Text indicator
+                                InfoPill(
+                                    icon: "square.stack.3d.up.fill",
+                                    text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
+                                )
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Set \(viewModel.currentSet) of \(viewModel.numSets)")
+                        }
+
+                        if viewModel.timerType == .emom {
                             InfoPill(
-                                icon: "square.stack.3d.up.fill",
-                                text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
+                                icon: "clock.fill",
+                                text: "Interval \(viewModel.currentInterval) of \(viewModel.numIntervals)"
                             )
                         }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Set \(viewModel.currentSet) of \(viewModel.numSets)")
                     }
-
-                    if viewModel.timerType == .emom {
-                        InfoPill(
-                            icon: "clock.fill",
-                            text: "Interval \(viewModel.currentInterval) of \(viewModel.numIntervals)"
-                        )
-                    }
+                    .transition(.opacity)
                 }
 
                 Spacer()

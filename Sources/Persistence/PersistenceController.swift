@@ -34,53 +34,54 @@ struct PersistenceController {
     func saveWorkout(_ workoutState: WorkoutState, wasCompleted: Bool, roundSplits: [[RoundSplitInfo]] = []) {
         let context = container.viewContext
 
-        let workout = NSEntityDescription.insertNewObject(forEntityName: "Workout", into: context)
-        workout.setValue(workoutState.id, forKey: "id")
-        workout.setValue(workoutState.startTimestamp, forKey: "timestamp")
-        workout.setValue(wasCompleted ? Date() : nil, forKey: "completedAt")
-        workout.setValue(workoutState.configuration.timerType.rawValue, forKey: "timerType")
-        workout.setValue(workoutState.elapsedSeconds, forKey: "totalDurationSeconds")
-        workout.setValue(wasCompleted, forKey: "wasCompleted")
-        workout.setValue(nil, forKey: "notes")
+        let workout = Workout(context: context)
+        workout.id = workoutState.id
+        workout.timestamp = workoutState.startTimestamp
+        workout.completedAt = wasCompleted ? Date() : nil
+        workout.timerType = workoutState.configuration.timerType.rawValue
+        workout.totalDurationSeconds = workoutState.elapsedSeconds
+        workout.wasCompleted = wasCompleted
+        workout.notes = nil
 
         // Create configuration
-        let config = NSEntityDescription.insertNewObject(forEntityName: "WorkoutConfiguration", into: context)
-        config.setValue(UUID(), forKey: "id")
-        config.setValue(Int32(workoutState.configuration.durationSeconds ?? 0), forKey: "durationSeconds")
-        config.setValue(Int32(workoutState.configuration.timeCapSeconds ?? 0), forKey: "timeCapSeconds")
-        config.setValue(Int32(workoutState.configuration.numIntervals ?? 0), forKey: "numIntervals")
-        config.setValue(Int32(workoutState.configuration.intervalDurationSeconds ?? 0), forKey: "intervalDurationSeconds")
-        config.setValue(Int32(workoutState.configuration.numSets), forKey: "numSets")
-        config.setValue(Int32(workoutState.configuration.restDurationSeconds ?? 0), forKey: "restDurationSeconds")
-        workout.setValue(config, forKey: "configuration")
+        let config = WorkoutConfiguration(context: context)
+        config.id = UUID()
+        config.durationSeconds = Int32(workoutState.configuration.durationSeconds ?? 0)
+        config.timeCapSeconds = Int32(workoutState.configuration.timeCapSeconds ?? 0)
+        config.numIntervals = Int32(workoutState.configuration.numIntervals ?? 0)
+        config.intervalDurationSeconds = Int32(workoutState.configuration.intervalDurationSeconds ?? 0)
+        config.numSets = Int32(workoutState.configuration.numSets)
+        config.restDurationSeconds = Int32(workoutState.configuration.restDurationSeconds ?? 0)
+        
+        workout.configuration = config
 
         // Create WorkoutSet entities with round splits
         for (setIndex, setRounds) in roundSplits.enumerated() {
-            let workoutSet = NSEntityDescription.insertNewObject(forEntityName: "WorkoutSet", into: context)
-            workoutSet.setValue(UUID(), forKey: "id")
-            workoutSet.setValue(Int32(setIndex + 1), forKey: "setNumber")
-            workoutSet.setValue(workoutState.startTimestamp, forKey: "startedAt") // Approximate
-            workoutSet.setValue(wasCompleted ? Date() : nil, forKey: "completedAt")
-            workoutSet.setValue(wasCompleted, forKey: "wasCompleted")
+            let workoutSet = WorkoutSet(context: context)
+            workoutSet.id = UUID()
+            workoutSet.setNumber = Int32(setIndex + 1)
+            workoutSet.startedAt = workoutState.startTimestamp // Approximate
+            workoutSet.completedAt = wasCompleted ? Date() : nil
+            workoutSet.wasCompleted = wasCompleted
 
             // Calculate set duration from rounds
             if let lastRound = setRounds.last {
-                workoutSet.setValue(lastRound.cumulativeTime, forKey: "durationSeconds")
+                workoutSet.durationSeconds = lastRound.cumulativeTime
             } else {
-                workoutSet.setValue(0, forKey: "durationSeconds")
+                workoutSet.durationSeconds = 0
             }
 
-            workoutSet.setValue(workout, forKey: "workout")
+            workoutSet.workout = workout
 
             // Create RoundSplit entities for this set
             for roundInfo in setRounds {
-                let roundSplit = NSEntityDescription.insertNewObject(forEntityName: "RoundSplit", into: context)
-                roundSplit.setValue(UUID(), forKey: "id")
-                roundSplit.setValue(Int16(roundInfo.roundNumber), forKey: "roundNumber")
-                roundSplit.setValue(roundInfo.splitTime, forKey: "splitTime")
-                roundSplit.setValue(roundInfo.cumulativeTime, forKey: "cumulativeTime")
-                roundSplit.setValue(roundInfo.timestamp, forKey: "timestamp")
-                roundSplit.setValue(workoutSet, forKey: "workoutSet")
+                let roundSplit = RoundSplit(context: context)
+                roundSplit.id = UUID()
+                roundSplit.roundNumber = Int16(roundInfo.roundNumber)
+                roundSplit.splitTime = roundInfo.splitTime
+                roundSplit.cumulativeTime = roundInfo.cumulativeTime
+                roundSplit.timestamp = roundInfo.timestamp
+                roundSplit.workoutSet = workoutSet
             }
         }
 
@@ -92,8 +93,8 @@ struct PersistenceController {
     }
 
     // MARK: - Fetch Workouts
-    func fetchAllWorkouts() -> [NSManagedObject] {
-        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "Workout")
+    func fetchAllWorkouts() -> [Workout] {
+        let fetchRequest: NSFetchRequest<Workout> = Workout.fetchRequest()
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
 
         do {
@@ -105,7 +106,7 @@ struct PersistenceController {
     }
 
     // MARK: - Delete Workout
-    func deleteWorkout(_ workout: NSManagedObject) {
+    func deleteWorkout(_ workout: Workout) {
         let context = container.viewContext
         context.delete(workout)
 

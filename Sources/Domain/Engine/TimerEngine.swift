@@ -4,7 +4,7 @@ import Combine
 
 public protocol TimerEngineDelegate: AnyObject {
     func timerDidTick(elapsed: TimeInterval, remaining: TimeInterval?)
-    func timerDidEmit(event: String)
+    func timerDidEmit(event: TimerEvent)
     func timerDidChangeState(_ state: TimerState)
 }
 
@@ -93,7 +93,7 @@ public final class TimerEngine {
             startWallTime = Date()
             changeState(.countdown)
             startDisplayLink()
-            delegate?.timerDidEmit(event: "countdown_start")
+            delegate?.timerDidEmit(event: .countdownStart)
             return
         }
 
@@ -118,9 +118,9 @@ public final class TimerEngine {
 
         // Emit appropriate start event
         if wasResting {
-            delegate?.timerDidEmit(event: "set_start")
+            delegate?.timerDidEmit(event: .setStart)
         } else if state == .running {
-            delegate?.timerDidEmit(event: "start")
+            delegate?.timerDidEmit(event: .start)
         }
     }
 
@@ -133,11 +133,14 @@ public final class TimerEngine {
         pauseWallTime = Date()
         changeState(.paused)
         stopDisplayLink()
+        // No explicit pause event needed by spec, but could be added if needed
+        delegate?.timerDidEmit(event: .pause)
     }
 
     public func resume() {
         guard state == .paused else { return }
         start()
+        delegate?.timerDidEmit(event: .resume)
     }
 
     public func reset() {
@@ -176,7 +179,7 @@ public final class TimerEngine {
 
         stopDisplayLink()
         changeState(.finished)
-        delegate?.timerDidEmit(event: "finish")
+        delegate?.timerDidEmit(event: .finish)
     }
 
     public func completeSet() {
@@ -194,7 +197,7 @@ public final class TimerEngine {
         stopDisplayLink()
 
         // Emit set completion event
-        delegate?.timerDidEmit(event: "set_complete")
+        delegate?.timerDidEmit(event: .setComplete)
 
         // Check if more sets remaining
         if shouldStartNextSet() {
@@ -203,7 +206,7 @@ public final class TimerEngine {
             // Final set - record with 0 rest time
             recordCompletedSet(workingTime: currentSetWorkingTime, restTime: 0)
             changeState(.finished)
-            delegate?.timerDidEmit(event: "finish")
+            delegate?.timerDidEmit(event: .finish)
         }
     }
 
@@ -272,7 +275,7 @@ public final class TimerEngine {
         restCountdown1Emitted = false
 
         changeState(.resting)
-        delegate?.timerDidEmit(event: "rest_start")
+        delegate?.timerDidEmit(event: .restStart)
         startDisplayLink()
     }
 
@@ -344,7 +347,7 @@ public final class TimerEngine {
         let previousSecond = Int(ceil(countdownRemaining))
         if currentSecond != previousSecond {
             if currentSecond == 3 || currentSecond == 2 || currentSecond == 1 {
-                delegate?.timerDidEmit(event: "countdown_\(currentSecond)")
+                delegate?.timerDidEmit(event: .countdown(currentSecond))
             }
         }
 
@@ -356,7 +359,7 @@ public final class TimerEngine {
             startWallTime = Date()  // Reset start time for actual workout
             accumulated = 0
             changeState(.running)
-            delegate?.timerDidEmit(event: "start")
+            delegate?.timerDidEmit(event: .start)
         }
     }
 
@@ -407,13 +410,13 @@ public final class TimerEngine {
 
         if currentSecond == 3 && !restCountdown3Emitted {
             restCountdown3Emitted = true
-            delegate?.timerDidEmit(event: "countdown_3")
+            delegate?.timerDidEmit(event: .countdown(3))
         } else if currentSecond == 2 && !restCountdown2Emitted {
             restCountdown2Emitted = true
-            delegate?.timerDidEmit(event: "countdown_2")
+            delegate?.timerDidEmit(event: .countdown(2))
         } else if currentSecond == 1 && !restCountdown1Emitted {
             restCountdown1Emitted = true
-            delegate?.timerDidEmit(event: "countdown_1")
+            delegate?.timerDidEmit(event: .countdown(1))
         }
 
         // Check if rest period is complete
@@ -452,20 +455,20 @@ public final class TimerEngine {
 
         if currentSecond == 3 && !emomCountdown3Emitted && currentInterval < numIntervals {
             emomCountdown3Emitted = true
-            delegate?.timerDidEmit(event: "countdown_3")
+            delegate?.timerDidEmit(event: .countdown(3))
         } else if currentSecond == 2 && !emomCountdown2Emitted && currentInterval < numIntervals {
             emomCountdown2Emitted = true
-            delegate?.timerDidEmit(event: "countdown_2")
+            delegate?.timerDidEmit(event: .countdown(2))
         } else if currentSecond == 1 && !emomCountdown1Emitted && currentInterval < numIntervals {
             emomCountdown1Emitted = true
-            delegate?.timerDidEmit(event: "countdown_1")
+            delegate?.timerDidEmit(event: .countdown(1))
         }
 
         // Check for interval transition
         let newInterval = Int(elapsed / Double(intervalDuration)) + 1
         if newInterval != currentInterval && newInterval <= numIntervals {
             currentInterval = newInterval
-            delegate?.timerDidEmit(event: "interval_tick")
+            delegate?.timerDidEmit(event: .intervalTick)
 
             // Reset countdown flags for next interval
             emomCountdown3Emitted = false
@@ -483,17 +486,19 @@ public final class TimerEngine {
 
         if remaining <= 60 && remaining > 59 && !lastMinuteWarningEmitted {
             lastMinuteWarningEmitted = true
-            delegate?.timerDidEmit(event: "last_minute")
+            delegate?.timerDidEmit(event: .lastMinute)
         }
 
         if remaining <= 30 && remaining > 29 && !thirtySecWarningEmitted {
             thirtySecWarningEmitted = true
-            delegate?.timerDidEmit(event: "30s_left")
+            delegate?.timerDidEmit(event: .thirtySecondsLeft)
         }
 
         if remaining <= 10 && remaining > 0 && !tenSecCountdownStarted {
             tenSecCountdownStarted = true
-            delegate?.timerDidEmit(event: "countdown_10s")
+            delegate?.timerDidEmit(event: .countdownTick(10))
         }
     }
 }
+
+
