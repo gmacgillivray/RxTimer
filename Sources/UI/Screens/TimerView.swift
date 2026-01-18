@@ -4,7 +4,6 @@ import UIKit
 struct TimerView: View {
     @StateObject private var viewModel: TimerViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    @State private var showDetails: Bool = true
 
     let onWorkoutStateChange: ((Bool) -> Void)?
     let onFinish: ((WorkoutSummaryData) -> Void)?
@@ -236,13 +235,17 @@ struct TimerView: View {
                 }
                 .contentShape(Rectangle()) // Make entire area tappable
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        showDetails.toggle()
+                    if viewModel.state == .idle {
+                        viewModel.startTapped()
+                    } else if viewModel.state == .running {
+                        viewModel.pauseTapped()
+                    } else if viewModel.state == .paused {
+                        viewModel.resumeTapped()
                     }
                 }
-                .accessibilityHint("Double tap to toggle detailed statistics")
+                .accessibilityHint("Double tap to Start, Pause or Resume timer")
 
-                if showDetails {
+
                     // Elapsed time display (AMRAP only)
                     if viewModel.timerType == .amrap && viewModel.state == .running {
                         VStack(spacing: 6) {
@@ -305,7 +308,6 @@ struct TimerView: View {
                         .accessibilityLabel("Pacing: Current Round \(viewModel.currentRoundTimeText). Last Round \(viewModel.lastRoundSplitTime.map(formatTime) ?? "None"). \(viewModel.currentRoundVsLastDelta.map { diff in diff > 0 ? "\(formatDeltaForVoiceOver(diff)) slower" : "\(formatDeltaForVoiceOver(diff)) faster" } ?? "")")
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-                }
 
                 // Round counter button (Always shown to allow round tracking)
                 if viewModel.showCounterButton && viewModel.state == .running {
@@ -345,7 +347,7 @@ struct TimerView: View {
                     .accessibilityLabel("Tap to complete round \(viewModel.roundCount + 1)")
                 }
 
-                if showDetails {
+
                     // Secondary info (set/interval indicators)
                     VStack(spacing: 8) {
                         if viewModel.numSets > 1 {
@@ -378,7 +380,6 @@ struct TimerView: View {
                         }
                     }
                     .transition(.opacity)
-                }
 
                 Spacer()
                     .layoutPriority(0.8)
@@ -570,86 +571,82 @@ struct TimerView: View {
 
     // MARK: - Control Buttons
     private var controlButtons: some View {
-        HStack(spacing: 12) {
-            // Primary action button (Start/Pause/Resume)
-            Button(action: {
-                if viewModel.state == .idle {
-                    viewModel.startTapped()
-                } else if viewModel.state == .running {
-                    viewModel.pauseTapped()
-                } else if viewModel.state == .paused {
-                    viewModel.resumeTapped()
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: buttonIcon)
-                        .font(.system(size: primaryIconSize, weight: .semibold))
-                    Text(buttonLabel)
-                        .font(.system(size: primaryButtonFontSize, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                .frame(maxWidth: .infinity, minHeight: 60)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: buttonGradientColors,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: accentColorForTimerType.opacity(0.4), radius: 12, x: 0, y: 6)
-                )
-                .foregroundColor(.white)
-            }
-            .accessibilityLabel(buttonAccessibilityLabel)
-            .disabled(viewModel.state == .finished)
+        VStack(spacing: 12) {
+            // Row 1: Primary action button (Start/Pause/Resume) + secondary action (if not final set finish)
+            HStack(spacing: 12) {
 
-            // Complete Set / Finish Workout / Skip Rest button (adaptive)
-            Button(action: {
-                if viewModel.state == .resting {
-                    // Skip rest and start next set
-                    viewModel.skipRest()
-                } else if viewModel.state == .running {
-                    // Complete set or finish workout
-                    if viewModel.currentSet < viewModel.numSets {
-                        // Not final set - complete set and start rest
-                        viewModel.completeSetTapped()
-                    } else {
-                        // Final set - finish entire workout
-                        viewModel.completeSetTapped() // This will call finish internally
-                        // Create summary data and call finish callback
-                        let summaryData = createSummaryData(wasCompleted: false)
-                        onFinish?(summaryData)
-                    }
+                // Complete Set / Skip Rest button (NOT shown when on final set - slider used instead)
+                if !shouldShowFinishSlider {
+                    secondaryActionButton
                 }
-            }) {
-                HStack(spacing: 6) {
-                    Image(systemName: finishButtonIcon)
-                        .font(.system(size: secondaryIconSize, weight: .semibold))
-                    Text(finishButtonLabel)
-                        .font(.system(size: secondaryButtonFontSize, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                .frame(maxWidth: .infinity, minHeight: 60)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(finishButtonBackground)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(finishButtonStroke, lineWidth: 1)
-                        )
-                )
-                .foregroundColor(.white)
             }
-            .accessibilityLabel(finishButtonAccessibilityLabel)
-            .disabled(viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished)
-            .opacity((viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished) ? 0.4 : 1)
+
+            // Row 2: Full-width slide-to-finish (only on final set while running)
+            if shouldShowFinishSlider {
+                SlideToFinishButton(
+                    label: "Slide to Finish",
+                    icon: "flag.checkered",
+                    accentColor: finishSliderColor
+                ) {
+                    viewModel.completeSetTapped()
+                    let summaryData = createSummaryData(wasCompleted: false)
+                    onFinish?(summaryData)
+                }
+            }
         }
         .frame(maxWidth: buttonContainerMaxWidth)
         .padding(.horizontal)
+    }
+
+    /// Whether to show the slide-to-finish slider (final set while running)
+    private var shouldShowFinishSlider: Bool {
+        viewModel.state == .running && viewModel.currentSet >= viewModel.numSets
+    }
+
+    /// Color for the finish slider based on timer type
+    private var finishSliderColor: Color {
+        switch viewModel.timerType {
+        case .forTime:
+            return .red
+        case .amrap:
+            return .orange
+        case .emom:
+            return .red
+        }
+    }
+
+    /// Secondary action button for Complete Set / Skip Rest
+    private var secondaryActionButton: some View {
+        Button(action: {
+            if viewModel.state == .resting {
+                viewModel.skipRest()
+            } else if viewModel.state == .running {
+                // Not final set - complete set and start rest
+                viewModel.completeSetTapped()
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: finishButtonIcon)
+                    .font(.system(size: secondaryIconSize, weight: .semibold))
+                Text(finishButtonLabel)
+                    .font(.system(size: secondaryButtonFontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(finishButtonBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(finishButtonStroke, lineWidth: 1)
+                    )
+            )
+            .foregroundColor(.white)
+        }
+        .accessibilityLabel(finishButtonAccessibilityLabel)
+        .disabled(viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished)
+        .opacity((viewModel.state == .idle || viewModel.state == .paused || viewModel.state == .finished) ? 0.4 : 1)
     }
 
     private var buttonIcon: String {
