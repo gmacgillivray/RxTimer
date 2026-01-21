@@ -1,5 +1,5 @@
 import XCTest
-@testable import RxTimer
+@testable import WorkoutTimer
 
 final class TimingDriftTests: XCTestCase {
 
@@ -175,7 +175,7 @@ final class TimingDriftTests: XCTestCase {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 31.0) {
             // Should have received 30s_left event
-            XCTAssertTrue(delegate.events.contains("30s_left"))
+            XCTAssertTrue(delegate.events.contains(.thirtySecondsLeft))
             warningExpectation.fulfill()
         }
 
@@ -203,7 +203,7 @@ final class TimingDriftTests: XCTestCase {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             // Should be in rest state after first set completes
             XCTAssertEqual(engine.state, .resting)
-            XCTAssertTrue(delegate.events.contains("rest_start"))
+            XCTAssertTrue(delegate.events.contains(.restStart))
             restExpectation.fulfill()
         }
 
@@ -283,7 +283,7 @@ final class TimingDriftTests: XCTestCase {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             // Should have received interval_tick event
-            XCTAssertTrue(delegate.events.contains("interval_tick"))
+            XCTAssertTrue(delegate.events.contains(.intervalTick))
             intervalExpectation.fulfill()
         }
 
@@ -323,16 +323,16 @@ final class TimingDriftTests: XCTestCase {
 
 class MockTimerDelegate: TimerEngineDelegate {
     var didReceiveStartEvent = false
-    var events: [String] = []
+    var events: [TimerEvent] = []
     var stateChanges: [TimerState] = []
 
     func timerDidTick(elapsed: TimeInterval, remaining: TimeInterval?) {
         // Track ticks if needed
     }
 
-    func timerDidEmit(event: String) {
+    func timerDidEmit(event: TimerEvent) {
         events.append(event)
-        if event == "start" {
+        if event == .start {
             didReceiveStartEvent = true
         }
     }

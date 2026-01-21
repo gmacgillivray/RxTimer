@@ -40,5 +40,3 @@ enum AppNavigationState: Equatable {
         }
     }
 }
-
-

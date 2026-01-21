@@ -1,8 +1,13 @@
 import SwiftUI
 
-struct RoundSplitDisplay: Equatable {
-    let roundNumber: Int
-    let splitTime: TimeInterval
+public struct RoundSplitDisplay: Equatable {
+    public let roundNumber: Int
+    public let splitTime: TimeInterval
+    
+    public init(roundNumber: Int, splitTime: TimeInterval) {
+        self.roundNumber = roundNumber
+        self.splitTime = splitTime
+    }
 }
 
 struct WorkoutSummaryView: View {

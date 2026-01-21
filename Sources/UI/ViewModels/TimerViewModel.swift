@@ -140,6 +140,14 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     }
 
     // MARK: - Timer Actions
+    func toggleCountdownPause() {
+        if state == .countdown {
+            engine.pause()
+        } else if state == .countdownPaused {
+            engine.resume()
+        }
+    }
+
     func startTapped() {
         if state == .idle {
             workoutState.startTimestamp = Date()
@@ -261,7 +269,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
         // Observe app entering foreground
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
-            .sink { [weak self] _ in
+            .sink { _ in
                 // Could check for state restoration here if needed
             }
             .store(in: &cancellables)

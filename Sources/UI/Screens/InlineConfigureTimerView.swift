@@ -13,8 +13,11 @@ struct InlineConfigureTimerView: View {
 
     @State private var configuration: TimerConfiguration
     @State private var presentationPhase: PresentationPhase = .configuration
+    
+    // Environment
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         timerType: TimerType,
@@ -43,103 +46,53 @@ struct InlineConfigureTimerView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                colors: [Color("SecondaryBackground"), Color.black],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Header
+                ConfigurationHeader(
+                    title: timerType.displayName,
+                    subtitle: subtitle,
+                    iconName: iconName,
+                    iconColor: iconColor
+                )
+                .padding(.bottom)
+                .background(Color(UIColor.systemGroupedBackground)) // Ensure opacity
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header
-                    VStack(spacing: 8) {
-                        Image(systemName: iconName)
-                            .font(.system(size: isCompactWidth ? 60 : 72))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [iconColor, iconColor.opacity(0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .padding(.top, isCompactWidth ? 40 : 24)
-
-                        Text("Configure \(timerType.displayName)")
-                            .font(.system(
-                                size: isCompactWidth ? 32 : 40,
-                                weight: .bold,
-                                design: .rounded
-                            ))
-                            .foregroundColor(.white)
-
-                        Text(subtitle)
-                            .font(.system(size: isCompactWidth ? 16 : 19))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.bottom, 20)
-
-                    // Configuration options
-                    VStack(spacing: 16) {
+                // Scrollable Content
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Specific Settings
                         switch timerType {
                         case .forTime:
-                            forTimeSettings
+                            forTimeSection
                         case .amrap:
-                            amrapSettings
+                            amrapSection
                         case .emom:
-                            emomSettings
+                            emomSection
                         }
-
-                        multiSetSettings
+                        
+                        // Common Settings
+                        multiSetSection
+                        
+                        // Bottom spacer for sticky button
+                        Spacer()
+                            .frame(height: 80)
                     }
-                    .padding(.horizontal, horizontalPadding)
-                    .frame(maxWidth: isCompactWidth ? .infinity : 700)
-
-                    // Start button
-                    Button(action: {
-                        // Save configuration for future use
-                        saveConfiguration()
-
-                        // Present workout directly from this view
-                        presentationPhase = .workout
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: isCompactWidth ? 24 : 28))
-                            Text("Start Workout")
-                                .font(.system(
-                                    size: isCompactWidth ? 20 : 24,
-                                    weight: .bold,
-                                    design: .rounded
-                                ))
-                        }
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: isCompactWidth ? 64 : 72
-                        )
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [iconColor, iconColor.opacity(0.7)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .shadow(color: iconColor.opacity(0.4), radius: 15, x: 0, y: 8)
-                        )
-                        .foregroundColor(.white)
-                    }
-                    .padding(.vertical, 30)
-                    .padding(.horizontal, horizontalPadding)
-                    .frame(maxWidth: isCompactWidth ? .infinity : 700)
-
-                    Spacer(minLength: 40)
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
             }
+            
+            // Sticky Footer
+            VStack {
+                Spacer()
+                StickyStartButton(action: startWorkout, color: iconColor)
+            }
         }
-        .navigationTitle("Configure \(timerType.displayName)")
+        .background(
+            Color(UIColor.systemGroupedBackground)
+                .ignoresSafeArea()
+        )
+        .navigationTitle("Configure Timer")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: Binding(
             get: { presentationPhase == .workout },
@@ -150,25 +103,32 @@ struct InlineConfigureTimerView: View {
                 restoredState: nil,
                 onWorkoutStateChange: { _ in },
                 onFinish: { summary in
-                    // Dismiss workout and return to config
-                    presentationPhase = .configuration
-
-                    // Notify parent to present summary
-                    onWorkoutComplete(summary)
-
-                    // Dismiss this config view
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        presentationMode.wrappedValue.dismiss()
-                    }
+                    finishWorkout(summary)
                 }
             )
+        }
+    }
+
+    // MARK: - Actions
+    
+    private func startWorkout() {
+        saveConfiguration()
+        presentationPhase = .workout
+    }
+    
+    private func finishWorkout(_ summary: WorkoutSummaryData) {
+        presentationPhase = .configuration
+        onWorkoutComplete(summary)
+        
+        // Dismiss this config view after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            presentationMode.wrappedValue.dismiss()
         }
     }
 
     // MARK: - Dismissal Handlers
 
     private func handleWorkoutDismissed() {
-        // User manually dismissed workout (swipe down on iOS 15+)
         if presentationPhase == .workout {
             presentationPhase = .configuration
         }
@@ -183,6 +143,8 @@ struct InlineConfigureTimerView: View {
             UserDefaults.standard.synchronize()
         }
     }
+
+    // MARK: - View Components
 
     private var iconName: String {
         switch timerType {
@@ -208,158 +170,101 @@ struct InlineConfigureTimerView: View {
         }
     }
 
-    private var isCompactWidth: Bool {
-        horizontalSizeClass == .compact
-    }
-
-    private var horizontalPadding: CGFloat {
-        if isCompactWidth {
-            return 20
-        } else {
-            return max(60, min(120, UIScreen.main.bounds.width * 0.08))
-        }
-    }
-
     // MARK: - For Time Settings
-    private var forTimeSettings: some View {
-        VStack(spacing: 12) {
-            ConfigCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(isOn: Binding(
-                        get: { configuration.timeCapSeconds != nil },
-                        set: { enabled in
-                            configuration.timeCapSeconds = enabled ? 1200 : nil
-                        }
-                    )) {
-                        Label("Time Cap", systemImage: "timer")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    }
-                    .tint(iconColor)
-
-                    if configuration.timeCapSeconds != nil {
-                        Picker("Duration", selection: Binding(
-                            get: { configuration.timeCapSeconds ?? 1200 },
-                            set: { configuration.timeCapSeconds = $0 }
-                        )) {
-                            ForEach([180, 300, 600, 900, 1200, 1500, 1800], id: \.self) { seconds in
-                                Text(formatSeconds(seconds)).tag(seconds)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-                }
-            }
+    private var forTimeSection: some View {
+        ConfigurationCard(title: "Time Cap") {
+            InlineOptionalTimePicker(
+                title: "Time Cap",
+                selection: Binding(
+                    get: { configuration.timeCapSeconds },
+                    set: { configuration.timeCapSeconds = $0 }
+                )
+            )
         }
     }
 
     // MARK: - AMRAP Settings
-    private var amrapSettings: some View {
-        ConfigCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Duration", systemImage: "clock")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                Picker("Duration", selection: Binding(
+    private var amrapSection: some View {
+        ConfigurationCard(title: "Work Duration") {
+            InlineTimePicker(
+                title: "Duration",
+                selection: Binding(
                     get: { configuration.durationSeconds ?? 600 },
                     set: { configuration.durationSeconds = $0 }
-                )) {
-                    ForEach(getAMRAPDurations(), id: \.self) { seconds in
-                        Text(formatSeconds(seconds)).tag(seconds)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(height: 150)
-            }
+                )
+            )
         }
     }
 
     // MARK: - EMOM Settings
-    private var emomSettings: some View {
-        VStack(spacing: 12) {
-            ConfigCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Number of Intervals", systemImage: "number")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                    Stepper(value: Binding(
+    private var emomSection: some View {
+        ConfigurationCard(title: "Work Intervals") {
+            VStack(spacing: 16) {
+                BigStepper(
+                    title: "Intervals",
+                    value: Binding(
                         get: { configuration.numIntervals ?? 10 },
                         set: { configuration.numIntervals = $0 }
-                    ), in: 1...60) {
-                        Text("\(configuration.numIntervals ?? 10) intervals")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundColor(iconColor)
-                    }
-                }
-            }
-
-            ConfigCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Interval Duration", systemImage: "timer")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                    Picker("Interval Duration", selection: Binding(
+                    ),
+                    range: 1...60,
+                    color: iconColor
+                )
+                
+                Divider()
+                
+                InlineTimePicker(
+                    title: "Interval Duration",
+                    selection: Binding(
                         get: { configuration.intervalDurationSeconds ?? 60 },
                         set: { configuration.intervalDurationSeconds = $0 }
-                    )) {
-                        ForEach(getEMOMIntervals(), id: \.self) { seconds in
-                            Text(formatSeconds(seconds)).tag(seconds)
-                        }
+                    )
+                )
+                
+                if let total = configuration.totalDurationSeconds {
+                    Divider()
+                    HStack {
+                        Text("Total Workout Time")
+                            .foregroundColor(.primary)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(formatSeconds(total))
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
                     }
-                    .pickerStyle(.wheel)
-                    .frame(height: 150)
+                    .padding(.top, 4)
                 }
-            }
-
-            if let total = configuration.totalDurationSeconds {
-                Text("Total: \(formatSeconds(total))")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
             }
         }
     }
 
     // MARK: - Multi-Set Settings
-    private var multiSetSettings: some View {
-        VStack(spacing: 12) {
-            ConfigCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Number of Sets", systemImage: "square.stack.3d.up.fill")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                    Stepper(value: Binding(
+    private var multiSetSection: some View {
+        ConfigurationCard(title: "Sets & Rest") {
+            VStack(spacing: 16) {
+                BigStepper(
+                    title: "Sets",
+                    value: Binding(
                         get: { configuration.numSets },
                         set: { newValue in
                             configuration.numSets = newValue
-
-                            // Auto-initialize rest to 120 seconds when enabling multi-set
                             if newValue > 1 && configuration.restDurationSeconds == nil {
                                 configuration.restDurationSeconds = 120
                             }
                         }
-                    ), in: 1...10) {
-                        Text("\(configuration.numSets) \(configuration.numSets == 1 ? "set" : "sets")")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundColor(iconColor)
-                    }
-                }
-            }
+                    ),
+                    range: 1...10,
+                    color: iconColor
+                )
 
-            if configuration.numSets > 1 {
-                ConfigCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Rest Between Sets", systemImage: "pause.circle")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                        Picker("Rest Duration", selection: Binding(
+                if configuration.numSets > 1 {
+                    Divider()
+                    InlineTimePicker(
+                        title: "Rest Between Sets",
+                        selection: Binding(
                             get: { configuration.restDurationSeconds ?? 120 },
                             set: { configuration.restDurationSeconds = $0 }
-                        )) {
-                            ForEach(getRestDurations(), id: \.self) { seconds in
-                                Text(formatSeconds(seconds)).tag(seconds)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
+                        )
+                    )
                 }
             }
         }
@@ -375,47 +280,364 @@ struct InlineConfigureTimerView: View {
             return String(format: "%d:%02d", mins, secs)
         }
     }
+}
 
-    private func getAMRAPDurations() -> [Int] {
-        var durations: [Int] = []
-        for i in 1...10 { durations.append(i * 60) }
-        for i in 6...10 { durations.append(i * 120) }
-        for i in 5...12 { durations.append(i * 300) }
-        return durations
-    }
+// MARK: - New Components
 
-    private func getEMOMIntervals() -> [Int] {
-        [15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600]
-    }
+struct ConfigurationHeader: View {
+    let title: String
+    let subtitle: String
+    let iconName: String
+    let iconColor: Color
 
-    private func getRestDurations() -> [Int] {
-        var durations: [Int] = []
-        for i in 1...8 { durations.append(i * 15) }
-        for i in 5...10 { durations.append(i * 30) }
-        for i in 6...10 { durations.append(i * 60) }
-        return durations
+    var body: some View {
+        HStack(spacing: 20) {
+            Image(systemName: iconName)
+                .font(.system(size: 40))
+                .foregroundColor(.white)
+                .frame(width: 70, height: 70)
+                .background(iconColor)
+                .clipShape(Circle())
+                .shadow(color: iconColor.opacity(0.4), radius: 8, x: 0, y: 4)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.top, 20)
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-// MARK: - Config Card
-struct ConfigCard<Content: View>: View {
+struct ConfigurationCard<Content: View>: View {
+    let title: String
     let content: Content
 
-    init(@ViewBuilder content: () -> Content) {
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
         self.content = content()
     }
 
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color("CardBackground"))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-            )
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title.uppercased())
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+                .padding(.leading, 4)
+            
+            VStack {
+                content
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        }
+    }
+}
+
+struct StickyStartButton: View {
+    let action: () -> Void
+    let color: Color
+
+    var body: some View {
+        VStack {
+            Button(action: action) {
+                Text("Start Workout")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(color)
+                    .cornerRadius(16)
+                    .shadow(color: color.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+        }
+        .padding()
+        .background(
+            Color(UIColor.systemGroupedBackground)
+                .opacity(0.9)
+                .ignoresSafeArea()
+        )
+    }
+}
+
+// MARK: - Inline Components
+
+struct InlineTimePicker: View {
+    let title: String
+    @Binding var selection: Int
+    @State private var isExpanded: Bool = false
+    @State private var minutes: Int = 0
+    @State private var seconds: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header (Always Visible)
+            Button(action: {
+                withAnimation {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text(title)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    HStack {
+                        Text(formatSeconds(selection))
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .foregroundColor(.gray)
+                    }
+                    .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+                .contentShape(Rectangle()) // Make full width tappable
+            }
+            .buttonStyle(.plain)
+
+            // Expanded Content
+            if isExpanded {
+                VStack(spacing: 16) {
+                    Divider()
+                    HStack {
+                        Picker("Minutes", selection: $minutes) {
+                            ForEach(0..<100) { min in
+                                Text("\(min) min").tag(min)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+
+                        Picker("Seconds", selection: $seconds) {
+                            ForEach(0..<60) { sec in
+                                Text("\(sec) sec").tag(sec)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                    }
+                    .frame(height: 150)
+                }
+                .onAppear {
+                    syncWheels(from: selection)
+                }
+                .onChange(of: selection) { newValue in
+                    syncWheels(from: newValue)
+                }
+                .onChange(of: minutes) { _ in updateSelection() }
+                .onChange(of: seconds) { _ in updateSelection() }
+            }
+        }
+    }
+
+    private func syncWheels(from totalSeconds: Int) {
+        let mins = totalSeconds / 60
+        let secs = totalSeconds % 60
+        if minutes != mins || seconds != secs {
+            minutes = mins
+            seconds = secs
+        }
+    }
+
+    private func updateSelection() {
+        let totalSeconds = (minutes * 60) + seconds
+        if selection != totalSeconds {
+            selection = totalSeconds
+        }
+    }
+
+    private func formatSeconds(_ seconds: Int) -> String {
+        let mins = seconds / 60
+        let secs = seconds % 60
+        if secs == 0 {
+            return "\(mins) min"
+        } else {
+            return String(format: "%d:%02d", mins, secs)
+        }
+    }
+}
+
+struct InlineOptionalTimePicker: View {
+    let title: String
+    @Binding var selection: Int?
+    @State private var isExpanded: Bool = false
+    @State private var minutes: Int = 0
+    @State private var seconds: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            Button(action: {
+                withAnimation {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text(title)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    HStack {
+                        if let val = selection {
+                            Text(formatSeconds(val))
+                        } else {
+                            Text("No Time Cap")
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .foregroundColor(.gray)
+                    }
+                    .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Expanded Content
+            if isExpanded {
+                VStack(spacing: 16) {
+                    Divider()
+                    
+                    // No Time Cap Toggle
+                    Toggle("No Time Cap", isOn: Binding(
+                        get: { selection == nil },
+                        set: { isNone in
+                            if isNone {
+                                selection = nil
+                            } else {
+                                // Default to 20 mins if re-enabling
+                                selection = (minutes * 60) + seconds
+                                if selection == 0 { selection = 1200; syncWheels(from: 1200) }
+                            }
+                        }
+                    ))
+                    
+                    if selection != nil {
+                        HStack {
+                            Picker("Minutes", selection: $minutes) {
+                                ForEach(0..<100) { min in
+                                    Text("\(min) min").tag(min)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+
+                            Picker("Seconds", selection: $seconds) {
+                                ForEach(0..<60) { sec in
+                                    Text("\(sec) sec").tag(sec)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+                        }
+                        .frame(height: 150)
+                    }
+                }
+                .onAppear {
+                    syncWheels(from: selection)
+                }
+                .onChange(of: selection) { newValue in
+                    syncWheels(from: newValue)
+                }
+                .onChange(of: minutes) { _ in updateSelection() }
+                .onChange(of: seconds) { _ in updateSelection() }
+            }
+        }
+    }
+
+    private func syncWheels(from selection: Int?) {
+        if let totalSeconds = selection {
+            let mins = totalSeconds / 60
+            let secs = totalSeconds % 60
+            if minutes != mins || seconds != secs {
+                minutes = mins
+                seconds = secs
+            }
+        }
+    }
+
+    private func updateSelection() {
+        guard selection != nil else { return } // Don't update if disabled
+        
+        let totalSeconds = (minutes * 60) + seconds
+        if selection != totalSeconds {
+            selection = totalSeconds
+        }
+    }
+
+    private func formatSeconds(_ seconds: Int) -> String {
+        let mins = seconds / 60
+        let secs = seconds % 60
+        if secs == 0 {
+            return "\(mins) min"
+        } else {
+            return String(format: "%d:%02d", mins, secs)
+        }
+    }
+}
+
+struct BigStepper: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.body)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            HStack(spacing: 20) {
+                Button(action: {
+                    if value > range.lowerBound {
+                        value -= 1
+                    }
+                }) {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+                .disabled(value <= range.lowerBound)
+
+                Text("\(value)")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .frame(minWidth: 30)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.primary)
+
+                Button(action: {
+                    if value < range.upperBound {
+                        value += 1
+                    }
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+                .disabled(value >= range.upperBound)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

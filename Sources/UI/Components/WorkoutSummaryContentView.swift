@@ -12,10 +12,16 @@ protocol WorkoutSummaryDisplayData {
 }
 
 // MARK: - Round Split Data
-struct WorkoutRoundSplit: Identifiable {
-    let id: UUID
-    let roundNumber: Int
-    let splitTime: TimeInterval
+public struct WorkoutRoundSplit: Identifiable {
+    public let id: UUID
+    public let roundNumber: Int
+    public let splitTime: TimeInterval
+
+    public init(id: UUID = UUID(), roundNumber: Int, splitTime: TimeInterval) {
+        self.id = id
+        self.roundNumber = roundNumber
+        self.splitTime = splitTime
+    }
 }
 
 // MARK: - Workout Summary Content View

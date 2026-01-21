@@ -76,7 +76,7 @@ public final class TimerEngine {
 
     // MARK: - Public Methods
     public func start() {
-        guard state == .idle || state == .paused || state == .resting || state == .countdown else { return }
+        guard state == .idle || state == .paused || state == .resting || state == .countdown || state == .countdownPaused else { return }
 
         let wasResting = state == .resting
 
@@ -125,22 +125,38 @@ public final class TimerEngine {
     }
 
     public func pause() {
-        guard state == .running else { return }
-
-        if let startTime = startWallTime {
-            accumulated += Date().timeIntervalSince(startTime)
+        if state == .running {
+            if let startTime = startWallTime {
+                accumulated += Date().timeIntervalSince(startTime)
+            }
+            pauseWallTime = Date()
+            changeState(.paused)
+            stopDisplayLink()
+            delegate?.timerDidEmit(event: .pause)
+        } else if state == .countdown {
+            // Pause logic for countdown
+            if let startTime = startWallTime {
+                let elapsed = Date().timeIntervalSince(startTime)
+                countdownRemaining = max(0, countdownDuration - elapsed)
+            }
+            changeState(.countdownPaused)
+            stopDisplayLink()
         }
-        pauseWallTime = Date()
-        changeState(.paused)
-        stopDisplayLink()
-        // No explicit pause event needed by spec, but could be added if needed
-        delegate?.timerDidEmit(event: .pause)
     }
 
     public func resume() {
-        guard state == .paused else { return }
-        start()
-        delegate?.timerDidEmit(event: .resume)
+        if state == .paused {
+            start()
+            delegate?.timerDidEmit(event: .resume)
+        } else if state == .countdownPaused {
+            // Resume logic for countdown
+            // Shift start time so that 'now - start' equals the elapsed time we had before pause
+            let elapsedAlready = countdownDuration - countdownRemaining
+            startWallTime = Date().addingTimeInterval(-elapsedAlready)
+            
+            changeState(.countdown)
+            startDisplayLink()
+        }
     }
 
     public func reset() {
@@ -193,7 +209,8 @@ public final class TimerEngine {
 
         // Record the working time for this set
         currentSetWorkingTime = accumulated
-
+        accumulated = 0 // Reset accumulated time since it's now recorded in the set
+        
         stopDisplayLink()
 
         // Emit set completion event
@@ -216,7 +233,7 @@ public final class TimerEngine {
         // Calculate actual rest time taken before skipping
         let actualRestTime = restAccumulated
         if let restStart = restStartTime {
-            let finalRestTime = actualRestTime + Date().timeIntervalSince(restStart)
+            let _ = actualRestTime + Date().timeIntervalSince(restStart)
             // Recording will happen in start() method
             // Store it temporarily so start() can record it
         }

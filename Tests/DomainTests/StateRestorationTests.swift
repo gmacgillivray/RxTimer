@@ -1,5 +1,5 @@
 import XCTest
-@testable import RxTimer
+@testable import WorkoutTimer
 
 final class StateRestorationTests: XCTestCase {
 
