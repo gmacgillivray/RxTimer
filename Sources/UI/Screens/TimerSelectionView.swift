@@ -15,15 +15,18 @@ struct TimerSelectionView: View {
 
     // Callback for workout completion
     let onWorkoutComplete: (WorkoutSummaryData) -> Void
+    let onStartWorkout: (TimerConfiguration) -> Void
 
     init(
         onSelectTimer: @escaping (TimerType) -> Void,
         onNavigateToHistory: @escaping () -> Void,
         onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
+        onStartWorkout: @escaping (TimerConfiguration) -> Void,
         showingConfiguration: Binding<Bool>,
         selectedTimerType: Binding<TimerType?>
     ) {
         self.onWorkoutComplete = onWorkoutComplete
+        self.onStartWorkout = onStartWorkout
         _viewModel = StateObject(
             wrappedValue: TimerSelectionViewModel(
                 onSelectTimer: onSelectTimer,
@@ -75,10 +78,10 @@ struct TimerSelectionView: View {
                     destination: InlineConfigureTimerView(
                         timerType: timerType,
                         onStart: { config in
-                            // Config view handles workout presentation
-                            // This callback is for cleanup only
+                            // Dismiss config view and start workout
                             showingConfiguration = false
                             selectedTimerType = nil
+                            onStartWorkout(config)
                         },
                         onWorkoutComplete: onWorkoutComplete,
                         onCancel: {
@@ -422,6 +425,7 @@ struct TimerSelectionView_Previews: PreviewProvider {
                 onSelectTimer: { _ in },
                 onNavigateToHistory: { },
                 onWorkoutComplete: { _ in },
+                onStartWorkout: { _ in },
                 showingConfiguration: $showingConfiguration,
                 selectedTimerType: $selectedTimerType
             )

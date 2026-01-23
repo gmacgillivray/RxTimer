@@ -29,6 +29,10 @@ struct MainContainerView: View {
                 showingHistory = true
             },
             onWorkoutComplete: handleWorkoutComplete,
+            onStartWorkout: { config in
+                activeWorkoutConfig = config
+                presentationPhase = .activeWorkout
+            },
             // Navigation bindings
             showingConfiguration: $showingConfiguration,
             selectedTimerType: $selectedTimerType

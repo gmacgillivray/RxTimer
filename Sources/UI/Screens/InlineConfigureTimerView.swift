@@ -12,7 +12,6 @@ struct InlineConfigureTimerView: View {
     let onCancel: () -> Void
 
     @State private var configuration: TimerConfiguration
-    @State private var presentationPhase: PresentationPhase = .configuration
     
     // Environment
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -94,44 +93,18 @@ struct InlineConfigureTimerView: View {
         )
         .navigationTitle("Configure Timer")
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: Binding(
-            get: { presentationPhase == .workout },
-            set: { if !$0 { handleWorkoutDismissed() } }
-        )) {
-            TimerView(
-                configuration: configuration,
-                restoredState: nil,
-                onWorkoutStateChange: { _ in },
-                onFinish: { summary in
-                    finishWorkout(summary)
-                }
-            )
-        }
     }
 
     // MARK: - Actions
     
     private func startWorkout() {
         saveConfiguration()
-        presentationPhase = .workout
+        onStart(configuration)
     }
     
     private func finishWorkout(_ summary: WorkoutSummaryData) {
-        presentationPhase = .configuration
         onWorkoutComplete(summary)
-        
-        // Dismiss this config view after a brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            presentationMode.wrappedValue.dismiss()
-        }
-    }
-
-    // MARK: - Dismissal Handlers
-
-    private func handleWorkoutDismissed() {
-        if presentationPhase == .workout {
-            presentationPhase = .configuration
-        }
+        presentationMode.wrappedValue.dismiss()
     }
 
     // MARK: - Configuration Persistence
