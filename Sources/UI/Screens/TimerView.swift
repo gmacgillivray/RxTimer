@@ -5,7 +5,16 @@ struct TimerView: View {
     @StateObject private var viewModel: TimerViewModel
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     @State private var areDetailsExpanded: Bool = true
+    @State private var timeDisplayPressed: Bool = false
+    @State private var isWiderThanTall: Bool = false
+    @State private var pausePulse: Bool = false
+    @State private var showUndoToast: Bool = false
+    @State private var undoToastRoundNumber: Int = 0
+    @State private var undoToastSplitTime: TimeInterval?
+    @State private var undoToastDelta: TimeInterval?
+    @State private var undoToastWorkItem: DispatchWorkItem?
 
 
     let onWorkoutStateChange: ((Bool) -> Void)?
@@ -23,6 +32,7 @@ struct TimerView: View {
     }
 
     var body: some View {
+        GeometryReader { geo in
         ZStack {
             // PERFORMANCE: Cache gradient backgrounds using .drawingGroup()
             // This flattens the two full-screen gradients into a single layer,
@@ -55,7 +65,29 @@ struct TimerView: View {
             } else {
                 mainTimerView
             }
+
+            // Undo toast overlay
+            if showUndoToast {
+                VStack {
+                    if isIPadLandscape {
+                        undoToastContent
+                            .padding(.top, 60)
+                        Spacer()
+                    } else {
+                        Spacer()
+                        undoToastContent
+                            .padding(.bottom, shouldShowFinishSlider ? 180 : 140)
+                    }
+                }
+                .transition(.move(edge: isIPadLandscape ? .top : .bottom).combined(with: .opacity))
+                .zIndex(10)
+            }
         }
+        .onAppear { isWiderThanTall = geo.size.width > geo.size.height }
+        .onChange(of: geo.size) { newSize in
+            isWiderThanTall = newSize.width > newSize.height
+        }
+        } // GeometryReader
         .navigationTitle(viewModel.timerTypeDisplayName)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(viewModel.state != .idle)
@@ -112,6 +144,74 @@ struct TimerView: View {
         )
     }
 
+    // MARK: - Undo Toast
+    private func showRoundUndoToast(roundNumber: Int) {
+        undoToastWorkItem?.cancel()
+        undoToastRoundNumber = roundNumber
+        undoToastSplitTime = viewModel.lastRoundSplitTime
+        undoToastDelta = viewModel.currentRoundVsLastDelta
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showUndoToast = true
+        }
+        let workItem = DispatchWorkItem { [self] in
+            dismissUndoToast()
+        }
+        undoToastWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
+    }
+
+    private func dismissUndoToast() {
+        undoToastWorkItem?.cancel()
+        undoToastWorkItem = nil
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showUndoToast = false
+        }
+    }
+
+    // MARK: - Undo Toast Content
+    private var undoToastContent: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Round \(undoToastRoundNumber) completed")
+                    .font(.system(size: horizontalSizeClass == .regular ? 24 : 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+
+                HStack(spacing: 12) {
+                    if let split = undoToastSplitTime {
+                        Text(TimeFormatter.format(split))
+                            .font(.system(size: horizontalSizeClass == .regular ? 20 : 16, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    if let delta = undoToastDelta {
+                        Text(TimeFormatter.formatDelta(delta))
+                            .font(.system(size: horizontalSizeClass == .regular ? 18 : 14, weight: .medium, design: .rounded))
+                            .foregroundColor(delta > 0 ? .red.opacity(0.9) : .green.opacity(0.9))
+                    }
+                }
+            }
+            Spacer()
+            Button(action: {
+                viewModel.undoLastRound()
+                dismissUndoToast()
+            }) {
+                Text("Undo")
+                    .font(.system(size: horizontalSizeClass == .regular ? 22 : 17, weight: .bold, design: .rounded))
+                    .foregroundColor(accentColorForTimerType)
+            }
+        }
+        .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 20)
+        .padding(.vertical, horizontalSizeClass == .regular ? 20 : 16)
+        .background(
+            RoundedRectangle(cornerRadius: horizontalSizeClass == .regular ? 16 : 14)
+                .fill(Color("CardBackground"))
+                .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+        )
+        .frame(maxWidth: horizontalSizeClass == .regular ? 500 : .infinity)
+        .padding(.horizontal, 20)
+    }
+
     // MARK: - Countdown View
     private var countdownView: some View {
         VStack(spacing: 40) {
@@ -139,6 +239,27 @@ struct TimerView: View {
             }
 
             Spacer()
+
+            // Skip countdown hint
+            if viewModel.state == .countdown {
+                Button(action: {
+                    viewModel.skipCountdown()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Tap to Skip")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                    }
+                    .foregroundColor(.white.opacity(0.5))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                }
+                .accessibilityLabel("Skip countdown and start workout")
+            }
+
+            Spacer()
+                .frame(height: 40)
         }
         .padding()
         .contentShape(Rectangle()) // Make full area tappable
@@ -224,130 +345,179 @@ struct TimerView: View {
 
     // MARK: - Main Timer View
     private var mainTimerView: some View {
+        Group {
+            if isLandscape {
+                landscapeTimerLayout
+            } else if isIPadLandscape {
+                iPadLandscapeTimerLayout
+            } else {
+                portraitTimerLayout
+            }
+        }
+    }
+
+    // MARK: - iPad Landscape Timer Layout
+    /// Centers the clock on screen with controls overlaid at the bottom
+    private var iPadLandscapeTimerLayout: some View {
+        ZStack {
+            // Centered clock with pacing stats below
+            VStack(spacing: 12) {
+                timeDisplayContent
+
+                if viewModel.state == .running {
+                    PacingStatsView(
+                        currentRoundTimeText: viewModel.currentRoundTimeText,
+                        lastRoundSplitTime: viewModel.lastRoundSplitTime,
+                        currentRoundVsLastDelta: viewModel.currentRoundVsLastDelta,
+                        accentColor: accentColorForTimerType,
+                        currentRoundFontSize: currentRoundFontSize,
+                        lastRoundFontSize: lastRoundFontSize,
+                        deltaFontSize: deltaFontSize,
+                        areDetailsExpanded: $areDetailsExpanded
+                    )
+                }
+            }
+
+            // Controls pinned to bottom
+            VStack(spacing: 16) {
+                Spacer()
+
+                // Round counter button (full-width, matching portrait style)
+                if viewModel.showCounterButton && viewModel.state == .running {
+                    Button(action: {
+                        viewModel.completeRound()
+                        showRoundUndoToast(roundNumber: viewModel.roundCount)
+                    }) {
+                        VStack(spacing: 8) {
+                            Text("Round \(viewModel.roundCount + 1)")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+
+                            Text("Tap to Complete Round")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 70)
+                        .padding(.horizontal, 32)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color("CardBackground"))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [accentColorForTimerType.opacity(0.6), accentColorForTimerType.opacity(0.2)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            ),
+                                            lineWidth: 2
+                                        )
+                                )
+                                .shadow(color: accentColorForTimerType.opacity(0.3), radius: 15, x: 0, y: 5)
+                        )
+                    }
+                    .frame(maxWidth: buttonContainerMaxWidth)
+                    .padding(.horizontal)
+                    .accessibilityLabel("Tap to complete round \(viewModel.roundCount + 1)")
+                }
+
+                // Set/interval info
+                secondaryInfoView
+
+                controlButtons
+                    .padding(.bottom, 20)
+            }
+        }
+        .padding()
+    }
+
+    // MARK: - Landscape Timer Layout
+    private var landscapeTimerLayout: some View {
+        HStack(spacing: 24) {
+            // Left side: time display
+            VStack(spacing: 8) {
+                Spacer()
+                timeDisplayContent
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+
+            // Right side: controls and info
+            VStack(spacing: 12) {
+                Spacer()
+
+                // Round counter (compact)
+                if viewModel.showCounterButton && viewModel.state == .running {
+                    Button(action: {
+                        viewModel.completeRound()
+                        showRoundUndoToast(roundNumber: viewModel.roundCount)
+                    }) {
+                        HStack(spacing: 8) {
+                            Text("Round \(viewModel.roundCount + 1)")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(accentColorForTimerType)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color("CardBackground"))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(accentColorForTimerType.opacity(0.4), lineWidth: 1.5)
+                                )
+                        )
+                    }
+                    .accessibilityLabel("Tap to complete round \(viewModel.roundCount + 1)")
+                }
+
+                // Secondary info
+                secondaryInfoView
+
+                Spacer()
+
+                // Controls
+                controlButtons
+
+                Spacer()
+                    .frame(height: 20)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.horizontal)
+    }
+
+    // MARK: - Portrait Timer Layout
+    private var portraitTimerLayout: some View {
         VStack(spacing: contentSpacing) {
                 Spacer()
                     .frame(minHeight: topSpacerMinHeight)
                     .layoutPriority(0.2)
 
-                // Time display with gradient
-                VStack(spacing: 12) {
-                    ZStack {
-                        Text(viewModel.timeText)
-                            .font(.system(size: mainTimerFontSize, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(.white)
-                            .opacity((viewModel.state == .idle || viewModel.state == .paused) ? 0.3 : 1.0) // Significantly dimmed when idle or paused
-                            .saturation((viewModel.state == .idle || viewModel.state == .paused) ? 0.7 : 1.0)
-                            .accessibilityLabel(viewModel.timerType == .amrap ? "Time Remaining: \(viewModel.timeText)" : "Elapsed Time: \(viewModel.timeText)")
-
-                        // Play Icon Overlay
-                        if viewModel.state == .idle || viewModel.state == .paused {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 100))
-                                .foregroundColor(.white.opacity(0.9))
-                                .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 4)
-                        }
-                    }
-
-
-                }
-                .contentShape(Rectangle()) // Make entire area tappable
-                .onTapGesture {
-                    if viewModel.state == .idle {
-                        viewModel.startTapped()
-                    } else if viewModel.state == .running {
-                        viewModel.pauseTapped()
-                    } else if viewModel.state == .paused {
-                        viewModel.resumeTapped()
-                    }
-                }
-                .accessibilityHint("Double tap to Start, Pause or Resume timer")
-
-                // Elapsed time display (AMRAP only)
-                if viewModel.timerType == .amrap && viewModel.state == .running {
-                    VStack(spacing: 6) {
-                        Text("Elapsed Time")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .textCase(.uppercase)
-
-                        Text(viewModel.elapsedTimeText)
-                            .font(.system(size: elapsedTimeFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(.white.opacity(0.7))
-                            .accessibilityLabel("Elapsed Time: \(viewModel.elapsedTimeText)")
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                timeDisplayContent
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: areDetailsExpanded)
 
                 // Pacing Stats (Current vs Last Round)
                 if viewModel.state == .running {
-                    VStack(spacing: 8) {
-                        if areDetailsExpanded {
-                            HStack(spacing: 50) {
-                                // Current Round Column
-                                VStack(spacing: 6) {
-                                    Text("Current Round")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                        .foregroundColor(.secondary)
-                                        .textCase(.uppercase)
-
-                                    Text(viewModel.currentRoundTimeText)
-                                        .font(.system(size: currentRoundFontSize, weight: .semibold, design: .rounded))
-                                        .monospacedDigit()
-                                        .foregroundColor(accentColorForTimerType)
-                                }
-
-                                // Last Round Column
-                                VStack(spacing: 6) {
-                                    Text("Last Round")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                        .foregroundColor(.secondary)
-                                        .textCase(.uppercase)
-
-                                    Text(viewModel.lastRoundSplitTime.map(formatTime) ?? "––:––")
-                                        .font(.system(size: lastRoundFontSize, weight: .medium, design: .rounded))
-                                        .monospacedDigit()
-                                        .foregroundColor(viewModel.lastRoundSplitTime != nil ? .white.opacity(0.8) : .white.opacity(0.4))
-
-                                    // Delta indicator
-                                    if let delta = viewModel.currentRoundVsLastDelta {
-                                        Text(formatDelta(delta))
-                                            .font(.system(size: deltaFontSize, weight: .medium))
-                                            .foregroundColor(delta > 0 ? .orange : .green)
-                                    } else {
-                                        Text(" ")
-                                            .font(.system(size: deltaFontSize, weight: .medium))
-                                            .accessibilityHidden(true)
-                                    }
-                                }
-                                .padding(.top, -6)
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Pacing: Current Round \(viewModel.currentRoundTimeText). Last Round \(viewModel.lastRoundSplitTime.map(formatTime) ?? "None"). \(viewModel.currentRoundVsLastDelta.map { diff in diff > 0 ? "\(formatDeltaForVoiceOver(diff)) slower" : "\(formatDeltaForVoiceOver(diff)) faster" } ?? "")")
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-
-                        // Toggle Button
-                        Button(action: {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                areDetailsExpanded.toggle()
-                            }
-                        }) {
-                            Image(systemName: areDetailsExpanded ? "chevron.compact.up" : "chevron.compact.down")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.secondary.opacity(0.5))
-                                .frame(width: 80, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel(areDetailsExpanded ? "Collapse Pacing Details" : "Show Pacing Details")
-                    }
+                    PacingStatsView(
+                        currentRoundTimeText: viewModel.currentRoundTimeText,
+                        lastRoundSplitTime: viewModel.lastRoundSplitTime,
+                        currentRoundVsLastDelta: viewModel.currentRoundVsLastDelta,
+                        accentColor: accentColorForTimerType,
+                        currentRoundFontSize: currentRoundFontSize,
+                        lastRoundFontSize: lastRoundFontSize,
+                        deltaFontSize: deltaFontSize,
+                        areDetailsExpanded: $areDetailsExpanded
+                    )
                 }
 
                 // Round counter button (Always shown to allow round tracking)
                 if viewModel.showCounterButton && viewModel.state == .running {
                     Button(action: {
                         viewModel.completeRound()
+                        showRoundUndoToast(roundNumber: viewModel.roundCount)
                     }) {
                         VStack(spacing: 8) {
                             Text("Round \(viewModel.roundCount + 1)")
@@ -394,9 +564,8 @@ struct TimerView: View {
                                         .frame(width: 8, height: 8)
                                 }
                             }
-                            .accessibilityHidden(true) // Text indicator provides the info
+                            .accessibilityHidden(true)
 
-                            // Text indicator
                             InfoPill(
                                 icon: "square.stack.3d.up.fill",
                                 text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
@@ -427,6 +596,150 @@ struct TimerView: View {
             .padding()
     }
 
+    // MARK: - Shared Time Display Content
+    private var timeDisplayContent: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                // Progress ring (thin, behind digits)
+                if let progress = viewModel.progress, viewModel.state == .running {
+                    Circle()
+                        .stroke(accentColorForTimerType.opacity(0.15), lineWidth: 4)
+                        .frame(width: progressRingSize, height: progressRingSize)
+                    Circle()
+                        .trim(from: 0, to: CGFloat(progress))
+                        .stroke(accentColorForTimerType.opacity(0.6), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: progressRingSize, height: progressRingSize)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 0.25), value: progress)
+                }
+
+                Text(viewModel.timeText)
+                    .font(.system(size: mainTimerFontSize, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+                    .opacity((viewModel.state == .idle || viewModel.state == .paused) ? 0.3 : 1.0)
+                    .saturation((viewModel.state == .idle || viewModel.state == .paused) ? 0.7 : 1.0)
+                    .accessibilityLabel(viewModel.timerType == .amrap ? "Time Remaining: \(viewModel.timeText)" : "Elapsed Time: \(viewModel.timeText)")
+
+                // Play Icon Overlay (idle)
+                if viewModel.state == .idle {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: isLandscape ? 60 : 100))
+                        .foregroundColor(.white.opacity(0.9))
+                        .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 4)
+                }
+
+                // Paused state: pulsing play icon + PAUSED label
+                if viewModel.state == .paused {
+                    VStack(spacing: 8) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: isLandscape ? 50 : 80))
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 4)
+                            .scaleEffect(pausePulse ? 1.1 : 0.95)
+                            .opacity(pausePulse ? 1.0 : 0.6)
+                            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pausePulse)
+
+                        Text("PAUSED")
+                            .font(.system(size: isLandscape ? 16 : 20, weight: .bold, design: .rounded))
+                            .foregroundColor(.yellow)
+                            .tracking(2)
+                    }
+                    .onAppear { pausePulse = true }
+                    .onDisappear { pausePulse = false }
+                }
+            }
+
+            // "Tap to Start" hint in idle state
+            if viewModel.state == .idle {
+                Text("Tap to Start")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.5))
+                    .transition(.opacity)
+            }
+
+            // AMRAP elapsed time
+            if viewModel.timerType == .amrap && viewModel.state == .running {
+                HStack(spacing: 6) {
+                    Text("Elapsed:")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                    Text(viewModel.elapsedTimeText)
+                        .font(.system(size: elapsedTimeFontSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .accessibilityLabel("Elapsed Time: \(viewModel.elapsedTimeText)")
+            }
+
+            // EMOM total elapsed
+            if viewModel.timerType == .emom && viewModel.state == .running {
+                HStack(spacing: 6) {
+                    Text("Total:")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                    Text(viewModel.emomElapsedTimeText)
+                        .font(.system(size: elapsedTimeFontSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .accessibilityLabel("Total Elapsed: \(viewModel.emomElapsedTimeText)")
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in timeDisplayPressed = true }
+                .onEnded { value in
+                    timeDisplayPressed = false
+                    // Treat as tap if drag distance is small
+                    let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                    guard distance < 10 else { return }
+                    if viewModel.state == .idle {
+                        viewModel.startTapped()
+                    } else if viewModel.state == .running {
+                        viewModel.pauseTapped()
+                    } else if viewModel.state == .paused {
+                        viewModel.resumeTapped()
+                    }
+                }
+        )
+        .scaleEffect(timeDisplayPressed ? 0.95 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: timeDisplayPressed)
+        .accessibilityHint("Double tap to Start, Pause or Resume timer")
+    }
+
+    // MARK: - Secondary Info View
+    private var secondaryInfoView: some View {
+        VStack(spacing: 8) {
+            if viewModel.numSets > 1 {
+                InfoPill(
+                    icon: "square.stack.3d.up.fill",
+                    text: "Set \(viewModel.currentSet) of \(viewModel.numSets)"
+                )
+                .accessibilityLabel("Set \(viewModel.currentSet) of \(viewModel.numSets)")
+            }
+
+            if viewModel.timerType == .emom {
+                InfoPill(
+                    icon: "clock.fill",
+                    text: "Interval \(viewModel.currentInterval) of \(viewModel.numIntervals)"
+                )
+            }
+        }
+    }
+
+    /// True when iPhone is in landscape (compact vertical size class).
+    /// iPad uses the portrait VStack layout in both orientations with adjusted spacers.
+    private var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+
+    /// True when iPad is in landscape orientation (wider than tall)
+    private var isIPadLandscape: Bool {
+        horizontalSizeClass == .regular && isWiderThanTall
+    }
+
     private var accentColorForTimerType: Color {
         switch viewModel.timerType {
         case .forTime:
@@ -439,13 +752,30 @@ struct TimerView: View {
     }
 
     private var mainTimerFontSize: CGFloat {
-        // iPad: 192 (double), iPhone: 96
-        horizontalSizeClass == .regular ? 192 : 96
+        if isLandscape { return 72 }
+        if isIPadLandscape { return 300 }
+        let expanded: CGFloat = horizontalSizeClass == .regular ? 192 : 96
+        let collapsed: CGFloat = horizontalSizeClass == .regular ? 240 : 120
+        if !areDetailsExpanded && viewModel.state == .running {
+            return collapsed
+        }
+        return expanded
     }
 
     private var restTimerFontSize: CGFloat {
         // iPad: 240 (double), iPhone: 120
         horizontalSizeClass == .regular ? 240 : 120
+    }
+
+    private var progressRingSize: CGFloat {
+        if isLandscape { return 100 }
+        if isIPadLandscape { return 340 }
+        let expanded: CGFloat = horizontalSizeClass == .regular ? 220 : 130
+        let collapsed: CGFloat = horizontalSizeClass == .regular ? 270 : 160
+        if !areDetailsExpanded && viewModel.state == .running {
+            return collapsed
+        }
+        return expanded
     }
 
     private var elapsedTimeFontSize: CGFloat {
@@ -511,52 +841,6 @@ struct TimerView: View {
         horizontalSizeClass == .regular ? 700 : nil
     }
 
-    private func formatTime(_ seconds: TimeInterval) -> String {
-        let totalSeconds = Int(max(0, seconds))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let secs = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        } else {
-            return String(format: "%02d:%02d", minutes, secs)
-        }
-    }
-
-    private func formatDelta(_ seconds: TimeInterval) -> String {
-        let absSeconds = abs(seconds)
-        let totalSeconds = Int(absSeconds)
-        let minutes = totalSeconds / 60
-        let secs = totalSeconds % 60
-
-        let timeString: String
-        if minutes > 0 {
-            timeString = String(format: "%d:%02d", minutes, secs)
-        } else {
-            timeString = String(format: "0:%02d", secs)
-        }
-
-        return seconds > 0 ? "+\(timeString) slower" : "-\(timeString) faster"
-    }
-
-    private func formatDeltaForVoiceOver(_ seconds: TimeInterval) -> String {
-        let absSeconds = abs(seconds)
-        let totalSeconds = Int(absSeconds)
-        let minutes = totalSeconds / 60
-        let secs = totalSeconds % 60
-
-        var components: [String] = []
-        if minutes > 0 {
-            components.append("\(minutes) minute\(minutes == 1 ? "" : "s")")
-        }
-        if secs > 0 || components.isEmpty {
-            components.append("\(secs) second\(secs == 1 ? "" : "s")")
-        }
-
-        let timeString = components.joined(separator: " ")
-        return seconds > 0 ? "\(timeString) slower" : "\(timeString) faster"
-    }
 
     private func convertRoundSplitsForDisplay() -> [[RoundSplitDisplay]] {
         return viewModel.allRounds.map { setRounds in
@@ -743,201 +1027,3 @@ struct TimerView: View {
         return "Finish Workout"
     }
 }
-
-// MARK: - Info Pill Component
-struct InfoPill: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-            Text(text)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-        }
-        .foregroundColor(.white)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(Color("CardBackground"))
-                .overlay(
-                    Capsule()
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-}
-
-// MARK: - RoundedCornerShape for specific corners
-struct RoundedCornerShape: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-// MARK: - SlideToFinishButton (Merged to fix build)
-/// A slide-to-confirm button that prevents accidental activation of destructive actions.
-/// Designed for ending workouts where accidental taps would be frustrating.
-struct SlideToFinishButton: View {
-    let label: String
-    let icon: String
-    let accentColor: Color
-    let onComplete: () -> Void
-
-    @State private var dragOffset: CGFloat = 0
-    @State private var isDragging: Bool = false
-    @State private var hasCompleted: Bool = false
-    @GestureState private var isPressed: Bool = false
-
-    // Layout constants meeting accessibility requirements
-    private let trackHeight: CGFloat = 60
-    private let thumbSize: CGFloat = 52 // Meets 52pt minimum touch target
-    private let thumbPadding: CGFloat = 4
-    private let completionThreshold: CGFloat = 0.85 // 85% of track width to trigger
-
-    var body: some View {
-        GeometryReader { geometry in
-            let trackWidth = geometry.size.width
-            let maxOffset = trackWidth - thumbSize - (thumbPadding * 2)
-            let progress = min(dragOffset / maxOffset, 1.0)
-            let isNearCompletion = progress >= completionThreshold
-
-            ZStack(alignment: .leading) {
-                // Track background
-                RoundedRectangle(cornerRadius: trackHeight / 2)
-                    .fill(trackBackgroundColor(progress: progress))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: trackHeight / 2)
-                            .stroke(trackStrokeColor(progress: progress), lineWidth: 1)
-                    )
-
-                // Progress fill
-                RoundedRectangle(cornerRadius: trackHeight / 2)
-                    .fill(progressFillColor(progress: progress))
-                    .frame(width: thumbSize + dragOffset + thumbPadding)
-
-                // Label text (fades as thumb approaches)
-                HStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.right.2")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(label)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    }
-                    .foregroundColor(.white.opacity(0.8))
-                    .opacity(Double(1.0 - progress * 1.5)) // Fades out as slider progresses
-                    Spacer()
-                }
-                .padding(.leading, thumbSize + thumbPadding * 2)
-
-                // Thumb
-                Circle()
-                    .fill(thumbColor(progress: progress, isNearCompletion: isNearCompletion))
-                    .frame(width: thumbSize, height: thumbSize)
-                    .overlay(
-                        Image(systemName: isNearCompletion ? "checkmark" : icon)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                    )
-                    .shadow(color: accentColor.opacity(0.4), radius: isDragging ? 8 : 4, x: 0, y: 2)
-                    .scaleEffect(isDragging ? 1.05 : 1.0)
-                    .offset(x: thumbPadding + dragOffset)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                guard !hasCompleted else { return }
-                                isDragging = true
-                                // Clamp offset between 0 and maxOffset
-                                dragOffset = min(max(0, value.translation.width), maxOffset)
-                            }
-                            .onEnded { value in
-                                isDragging = false
-                                let finalProgress = dragOffset / maxOffset
-
-                                if finalProgress >= completionThreshold {
-                                    // Complete the action
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        dragOffset = maxOffset
-                                        hasCompleted = true
-                                    }
-
-                                    // Haptic feedback
-                                    let generator = UINotificationFeedbackGenerator()
-                                    generator.notificationOccurred(.success)
-
-                                    // Delay callback slightly for visual feedback
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                        onComplete()
-                                    }
-                                } else {
-                                    // Spring back to start
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                        dragOffset = 0
-                                    }
-
-                                    // Light haptic for reset
-                                    let generator = UIImpactFeedbackGenerator(style: .light)
-                                    generator.impactOccurred()
-                                }
-                            }
-                    )
-            }
-            .frame(height: trackHeight)
-        }
-        .frame(height: trackHeight)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-
-        .accessibilityAction {
-            // VoiceOver users can double-tap to activate
-            onComplete()
-        }
-    }
-
-    // MARK: - Color Helpers
-
-    private func trackBackgroundColor(progress: CGFloat) -> Color {
-        Color("CardBackground").opacity(0.8)
-    }
-
-    private func trackStrokeColor(progress: CGFloat) -> Color {
-        if progress >= completionThreshold {
-            return accentColor.opacity(0.8)
-        }
-        return accentColor.opacity(0.3 + progress * 0.3)
-    }
-
-    private func progressFillColor(progress: CGFloat) -> Color {
-        if progress >= completionThreshold {
-            return accentColor.opacity(0.4)
-        }
-        return accentColor.opacity(0.15 + progress * 0.2)
-    }
-
-    private func thumbColor(progress: CGFloat, isNearCompletion: Bool) -> LinearGradient {
-        if isNearCompletion {
-            return LinearGradient(
-                colors: [accentColor, accentColor.opacity(0.8)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-        return LinearGradient(
-            colors: [accentColor.opacity(0.8), accentColor.opacity(0.6)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-}
-

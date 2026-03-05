@@ -2,9 +2,16 @@ import Foundation
 import UIKit
 
 class HapticCoordinator {
-    private let haptics = HapticService.shared
-    
+    private let haptics: HapticService
+    private let settings: SettingsManager
+
+    init(hapticService: HapticService = .shared, settings: SettingsManager = .shared) {
+        self.haptics = hapticService
+        self.settings = settings
+    }
+
     func handleEvent(_ event: TimerEvent) {
+        guard settings.hapticsEnabled else { return }
         switch event {
         case .countdown(_):
              // Use a lighter haptic for countdown ticks if desired, 

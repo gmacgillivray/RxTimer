@@ -47,14 +47,10 @@ public final class TimerEngine {
     private let countdownDuration: TimeInterval = 10.0
 
     // EMOM interval countdown tracking
-    private var emomCountdown3Emitted = false
-    private var emomCountdown2Emitted = false
-    private var emomCountdown1Emitted = false
+    private var emomEmittedSeconds: Set<Int> = []
 
     // Rest period countdown tracking
-    private var restCountdown3Emitted = false
-    private var restCountdown2Emitted = false
-    private var restCountdown1Emitted = false
+    private var restEmittedSeconds: Set<Int> = []
 
     public private(set) var state: TimerState = .idle
     public weak var delegate: TimerEngineDelegate?
@@ -76,7 +72,7 @@ public final class TimerEngine {
 
     // MARK: - Public Methods
     public func start() {
-        guard state == .idle || state == .paused || state == .resting || state == .countdown || state == .countdownPaused else { return }
+        guard state == .idle || state == .paused || state == .resting else { return }
 
         let wasResting = state == .resting
 
@@ -173,18 +169,10 @@ public final class TimerEngine {
         currentSetWorkingTime = 0
         countdownRemaining = countdownDuration
 
-        // BUG FIX: Reset warning flags to prevent issues in multi-workout sessions
-        lastMinuteWarningEmitted = false
-        thirtySecWarningEmitted = false
-        tenSecCountdownStarted = false
-
-        // Reset countdown flags
-        emomCountdown3Emitted = false
-        emomCountdown2Emitted = false
-        emomCountdown1Emitted = false
-        restCountdown3Emitted = false
-        restCountdown2Emitted = false
-        restCountdown1Emitted = false
+        // Reset all countdown/warning tracking sets
+        emomEmittedSeconds.removeAll()
+        restEmittedSeconds.removeAll()
+        amrapEmittedWarnings.removeAll()
     }
 
     public func finish() {
@@ -227,19 +215,20 @@ public final class TimerEngine {
         }
     }
 
+    public func skipCountdown() {
+        guard state == .countdown || state == .countdownPaused else { return }
+        stopDisplayLink()
+        startWallTime = Date()
+        accumulated = 0
+        changeState(.running)
+        delegate?.timerDidEmit(event: .start)
+        startDisplayLink()
+    }
+
     public func skipRest() {
         guard state == .resting else { return }
-
-        // Calculate actual rest time taken before skipping
-        let actualRestTime = restAccumulated
-        if let restStart = restStartTime {
-            let _ = actualRestTime + Date().timeIntervalSince(restStart)
-            // Recording will happen in start() method
-            // Store it temporarily so start() can record it
-        }
-
         stopDisplayLink()
-        start() // Start the next set immediately (this will record rest time)
+        start()
     }
 
     public func getCurrentElapsed() -> TimeInterval {
@@ -275,7 +264,14 @@ public final class TimerEngine {
         guard let restDuration = configuration.restDurationSeconds, restDuration > 0 else {
             // No rest configured, record set with 0 rest and start next set immediately
             recordCompletedSet(workingTime: currentSetWorkingTime, restTime: 0)
-            start()
+            accumulated = 0
+            currentInterval = 1
+            currentSet += 1
+            restAccumulated = 0
+            startWallTime = Date()
+            changeState(.running)
+            delegate?.timerDidEmit(event: .setStart)
+            startDisplayLink()
             return
         }
 
@@ -286,10 +282,8 @@ public final class TimerEngine {
         restStartTime = Date()
         restAccumulated = 0
 
-        // Reset rest countdown flags for this rest period
-        restCountdown3Emitted = false
-        restCountdown2Emitted = false
-        restCountdown1Emitted = false
+        // Reset rest countdown tracking for this rest period
+        restEmittedSeconds.removeAll()
 
         changeState(.resting)
         delegate?.timerDidEmit(event: .restStart)
@@ -425,15 +419,8 @@ public final class TimerEngine {
         // Use ceil() to align beeps with display
         let currentSecond = Int(ceil(restRemaining))
 
-        if currentSecond == 3 && !restCountdown3Emitted {
-            restCountdown3Emitted = true
-            delegate?.timerDidEmit(event: .countdown(3))
-        } else if currentSecond == 2 && !restCountdown2Emitted {
-            restCountdown2Emitted = true
-            delegate?.timerDidEmit(event: .countdown(2))
-        } else if currentSecond == 1 && !restCountdown1Emitted {
-            restCountdown1Emitted = true
-            delegate?.timerDidEmit(event: .countdown(1))
+        if (1...3).contains(currentSecond), restEmittedSeconds.insert(currentSecond).inserted {
+            delegate?.timerDidEmit(event: .countdown(currentSecond))
         }
 
         // Check if rest period is complete
@@ -470,15 +457,9 @@ public final class TimerEngine {
         // Use ceil() to align beeps with display
         let currentSecond = Int(ceil(timeUntilNextInterval))
 
-        if currentSecond == 3 && !emomCountdown3Emitted && currentInterval < numIntervals {
-            emomCountdown3Emitted = true
-            delegate?.timerDidEmit(event: .countdown(3))
-        } else if currentSecond == 2 && !emomCountdown2Emitted && currentInterval < numIntervals {
-            emomCountdown2Emitted = true
-            delegate?.timerDidEmit(event: .countdown(2))
-        } else if currentSecond == 1 && !emomCountdown1Emitted && currentInterval < numIntervals {
-            emomCountdown1Emitted = true
-            delegate?.timerDidEmit(event: .countdown(1))
+        if (1...3).contains(currentSecond), currentInterval < numIntervals,
+           emomEmittedSeconds.insert(currentSecond).inserted {
+            delegate?.timerDidEmit(event: .countdown(currentSecond))
         }
 
         // Check for interval transition
@@ -487,32 +468,25 @@ public final class TimerEngine {
             currentInterval = newInterval
             delegate?.timerDidEmit(event: .intervalTick)
 
-            // Reset countdown flags for next interval
-            emomCountdown3Emitted = false
-            emomCountdown2Emitted = false
-            emomCountdown1Emitted = false
+            // Reset countdown tracking for next interval
+            emomEmittedSeconds.removeAll()
         }
     }
 
-    private var lastMinuteWarningEmitted = false
-    private var thirtySecWarningEmitted = false
-    private var tenSecCountdownStarted = false
+    private var amrapEmittedWarnings: Set<String> = []
 
     private func checkAMRAPWarnings(remaining: TimeInterval?) {
         guard let remaining = remaining else { return }
 
-        if remaining <= 60 && remaining > 59 && !lastMinuteWarningEmitted {
-            lastMinuteWarningEmitted = true
+        if remaining <= 60 && remaining > 59, amrapEmittedWarnings.insert("lastMinute").inserted {
             delegate?.timerDidEmit(event: .lastMinute)
         }
 
-        if remaining <= 30 && remaining > 29 && !thirtySecWarningEmitted {
-            thirtySecWarningEmitted = true
+        if remaining <= 30 && remaining > 29, amrapEmittedWarnings.insert("thirtySeconds").inserted {
             delegate?.timerDidEmit(event: .thirtySecondsLeft)
         }
 
-        if remaining <= 10 && remaining > 0 && !tenSecCountdownStarted {
-            tenSecCountdownStarted = true
+        if remaining <= 10 && remaining > 0, amrapEmittedWarnings.insert("tenSecCountdown").inserted {
             delegate?.timerDidEmit(event: .countdownTick(10))
         }
     }

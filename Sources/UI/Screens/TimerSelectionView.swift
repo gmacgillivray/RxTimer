@@ -9,32 +9,28 @@ struct TimerSelectionView: View {
     @StateObject private var viewModel: TimerSelectionViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    // Navigation state passed from parent
-    @Binding var showingConfiguration: Bool
-    @Binding var selectedTimerType: TimerType?
+    // Internal navigation state
+    @State private var showingConfiguration = false
+    @State private var selectedTimerType: TimerType?
+    @State private var showingSettings = false
 
-    // Callback for workout completion
+    // Callbacks
     let onWorkoutComplete: (WorkoutSummaryData) -> Void
     let onStartWorkout: (TimerConfiguration) -> Void
 
     init(
-        onSelectTimer: @escaping (TimerType) -> Void,
         onNavigateToHistory: @escaping () -> Void,
         onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
-        onStartWorkout: @escaping (TimerConfiguration) -> Void,
-        showingConfiguration: Binding<Bool>,
-        selectedTimerType: Binding<TimerType?>
+        onStartWorkout: @escaping (TimerConfiguration) -> Void
     ) {
         self.onWorkoutComplete = onWorkoutComplete
         self.onStartWorkout = onStartWorkout
         _viewModel = StateObject(
             wrappedValue: TimerSelectionViewModel(
-                onSelectTimer: onSelectTimer,
+                onSelectTimer: { _ in },
                 onNavigateToHistory: onNavigateToHistory
             )
         )
-        _showingConfiguration = showingConfiguration
-        _selectedTimerType = selectedTimerType
     }
 
     var body: some View {
@@ -59,9 +55,15 @@ struct TimerSelectionView: View {
             .navigationTitle("RxTimer")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    settingsButton
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     historyButton
                 }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
             }
         }
         .navigationViewStyle(.stack) // P0: Force single-column layout on all devices
@@ -122,7 +124,8 @@ struct TimerSelectionView: View {
                         timerType: timerType,
                         configuration: viewModel.configuration(for: timerType),
                         onTap: {
-                            viewModel.selectTimer(timerType)
+                            selectedTimerType = timerType
+                            showingConfiguration = true
                         }
                     )
                 }
@@ -150,18 +153,19 @@ struct TimerSelectionView: View {
 
             // Timer cards in grid
             LazyVGrid(
-                columns: gridColumns, // P1: Adaptive columns (3 for large iPads, 2 for mini)
-                spacing: 24 // P1: Increased spacing for better touch targets
+                columns: gridColumns,
+                spacing: 24
             ) {
                 ForEach(TimerType.allCases, id: \.self) { timerType in
                     TimerTypeCard(
                         timerType: timerType,
                         configuration: viewModel.configuration(for: timerType),
                         onTap: {
-                            viewModel.selectTimer(timerType)
+                            selectedTimerType = timerType
+                            showingConfiguration = true
                         }
                     )
-                    .frame(maxHeight: 320) // P1: Constrain card height for better proportions
+                    .frame(maxHeight: 320)
                 }
             }
 
@@ -197,6 +201,24 @@ struct TimerSelectionView: View {
                 .foregroundColor(.white.opacity(0.6))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Settings Button
+
+    private var settingsButton: some View {
+        Button(action: { showingSettings = true }) {
+            Image(systemName: "gearshape.fill")
+                .font(.system(
+                    size: isCompactWidth ? 18 : 22,
+                    weight: .semibold
+                ))
+                .foregroundColor(.white)
+                .frame(
+                    width: isCompactWidth ? 44 : 52,
+                    height: isCompactWidth ? 44 : 52
+                )
+        }
+        .accessibilityLabel("Settings")
     }
 
     // MARK: - History Button
@@ -417,17 +439,11 @@ struct TimerSelectionView_Previews: PreviewProvider {
     }
 
     struct PreviewWrapper: View {
-        @State private var showingConfiguration = false
-        @State private var selectedTimerType: TimerType?
-
         var body: some View {
             TimerSelectionView(
-                onSelectTimer: { _ in },
                 onNavigateToHistory: { },
                 onWorkoutComplete: { _ in },
-                onStartWorkout: { _ in },
-                showingConfiguration: $showingConfiguration,
-                selectedTimerType: $selectedTimerType
+                onStartWorkout: { _ in }
             )
         }
     }

@@ -1,77 +1,64 @@
 import SwiftUI
 
-private enum MainPresentationPhase {
-    case home
-    case activeWorkout
-    case transitioning
-    case summary
-}
-
 struct MainContainerView: View {
-    // MARK: - State Management
+    // MARK: - State Management (Single source of truth)
+    @State private var navState: AppNavigationState = .home
 
-    @State private var selectedTimerType: TimerType?
-    @State private var showingConfiguration = false
-    @State private var activeWorkoutConfig: TimerConfiguration?
-    @State private var presentationPhase: MainPresentationPhase = .home
-    @State private var workoutRestoredState: WorkoutState?
-    @State private var summaryData: WorkoutSummaryData?
+    // Transient data carried between navigation states
     @State private var pendingWorkoutSummary: WorkoutSummaryData?
-    @State private var showingHistory = false
+
+    // State restoration prompt
+    @State private var pendingRestoredState: WorkoutState?
+    @State private var showRestorePrompt: Bool = false
 
     var body: some View {
         TimerSelectionView(
-            onSelectTimer: { timerType in
-                selectedTimerType = timerType
-                showingConfiguration = true
-            },
             onNavigateToHistory: {
-                showingHistory = true
+                navState = .history
             },
-            onWorkoutComplete: handleWorkoutComplete,
+            onWorkoutComplete: { summary in
+                pendingWorkoutSummary = summary
+            },
             onStartWorkout: { config in
-                activeWorkoutConfig = config
-                presentationPhase = .activeWorkout
-            },
-            // Navigation bindings
-            showingConfiguration: $showingConfiguration,
-            selectedTimerType: $selectedTimerType
+                navState = .activeWorkout(config, restoredState: nil)
+            }
         )
-        // Active workout full-screen cover (only used for state restoration)
+        // Active workout full-screen cover
         .fullScreenCover(isPresented: Binding(
-            get: { presentationPhase == .activeWorkout },
-            set: { if !$0 { presentationPhase = .home } }
+            get: {
+                if case .activeWorkout = navState { return true }
+                return false
+            },
+            set: { if !$0 { navState = .home } }
         )) {
-            if let config = activeWorkoutConfig {
+            if case .activeWorkout(let config, let restoredState) = navState {
                 TimerView(
                     configuration: config,
-                    restoredState: workoutRestoredState,
+                    restoredState: restoredState,
                     onWorkoutStateChange: { _ in },
                     onFinish: { summary in
-                        summaryData = summary
-                        presentationPhase = .transitioning
-
-                        // Allow dismissal animation to complete before presenting summary
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            presentationPhase = .summary
-                        }
+                        navState = .summary(summary)
                     }
                 )
             }
         }
-        // Summary full-screen cover (used when restoring state)
+        // Summary full-screen cover
         .fullScreenCover(isPresented: Binding(
-            get: { presentationPhase == .summary },
-            set: { if !$0 { handleSummaryDismissed() } }
+            get: {
+                if case .summary = navState { return true }
+                return false
+            },
+            set: { if !$0 { navState = .home } }
         )) {
-            if let summary = summaryData {
+            if case .summary(let summary) = navState {
                 WorkoutSummaryView(
                     data: summary,
                     onDismiss: {
-                        presentationPhase = .home
-                        summaryData = nil
-                        activeWorkoutConfig = nil
-                        workoutRestoredState = nil
+                        navState = .home
+                    },
+                    onRepeat: {
+                        let config = summary.configuration
+                        navState = .activeWorkout(config, restoredState: nil)
                     }
                 )
             }
@@ -82,13 +69,19 @@ struct MainContainerView: View {
                 data: summary,
                 onDismiss: {
                     pendingWorkoutSummary = nil
-                    // Clean up config state
-                    selectedTimerType = nil
+                },
+                onRepeat: {
+                    let config = summary.configuration
+                    pendingWorkoutSummary = nil
+                    navState = .activeWorkout(config, restoredState: nil)
                 }
             )
         }
         // History full screen
-        .fullScreenCover(isPresented: $showingHistory) {
+        .fullScreenCover(isPresented: Binding(
+            get: { navState == .history },
+            set: { if !$0 { navState = .home } }
+        )) {
             NavigationView {
                 WorkoutHistoryView(
                     onSelectWorkout: { workout in
@@ -101,33 +94,28 @@ struct MainContainerView: View {
         .onAppear {
             checkForStateRestoration()
         }
+        .alert("Resume Workout?", isPresented: $showRestorePrompt) {
+            Button("Resume") {
+                if let state = pendingRestoredState {
+                    navState = .activeWorkout(state.configuration, restoredState: state)
+                }
+                pendingRestoredState = nil
+            }
+            Button("Discard", role: .destructive) {
+                WorkoutStateManager.shared.clearState()
+                pendingRestoredState = nil
+            }
+        } message: {
+            if let state = pendingRestoredState {
+                Text("You have an unfinished \(state.configuration.timerType.displayName) workout. Would you like to resume where you left off?")
+            }
+        }
     }
 
     private func checkForStateRestoration() {
         if let savedState = WorkoutStateManager.shared.loadState() {
-            // Restore the workout
-            workoutRestoredState = savedState
-            activeWorkoutConfig = savedState.configuration
-            presentationPhase = .activeWorkout
-        }
-    }
-
-    private func handleSummaryDismissed() {
-        if presentationPhase == .summary {
-            presentationPhase = .home
-            summaryData = nil
-            activeWorkoutConfig = nil
-            workoutRestoredState = nil
-        }
-    }
-
-    private func handleWorkoutComplete(_ summary: WorkoutSummaryData) {
-        // Dismiss config view first
-        showingConfiguration = false
-
-        // Schedule summary presentation after config dismisses
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            pendingWorkoutSummary = summary
+            pendingRestoredState = savedState
+            showRestorePrompt = true
         }
     }
 }

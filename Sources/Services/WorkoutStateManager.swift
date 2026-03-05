@@ -8,7 +8,7 @@ final class WorkoutStateManager {
     private let stateKey = "com.workoutTimer.activeWorkoutState"
     private let expiryDuration: TimeInterval = 3600 // 1 hour
 
-    private init() {}
+    init() {}
 
     // MARK: - Save State
     func saveState(_ state: WorkoutState) {

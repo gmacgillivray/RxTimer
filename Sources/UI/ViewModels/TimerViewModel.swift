@@ -15,6 +15,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     @Published var currentInterval: Int = 1
     @Published var showCounterButton: Bool = true // Always show round counter
     @Published var countdownText: String = "10"
+    @Published var emomElapsedTimeText: String = "00:00"
 
     // MARK: - Exposed Configuration (read-only)
     var timerType: TimerType { timerConfiguration.timerType }
@@ -22,7 +23,14 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     var numIntervals: Int { timerConfiguration.numIntervals ?? 0 }
     var timerTypeDisplayName: String { timerConfiguration.timerType.displayName }
     var configuration: TimerConfiguration { timerConfiguration }
-    var allRounds: [[RoundSplitData]] { allRoundSplits }
+    var allRounds: [[RoundSplitData]] { roundTracker.allRoundSplits }
+
+    /// Progress from 0.0 to 1.0 for timed workouts (AMRAP, EMOM, For Time with cap)
+    var progress: Double? {
+        guard let total = timerConfiguration.totalDurationSeconds, total > 0 else { return nil }
+        let elapsed = engine.getCurrentElapsed()
+        return min(1.0, max(0.0, elapsed / Double(total)))
+    }
 
     func getCurrentElapsed() -> TimeInterval {
         return engine.getCurrentElapsed()
@@ -39,26 +47,17 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     // MARK: - Properties
     private let timerConfiguration: TimerConfiguration
     private let engine: TimerEngine
-    private let audioCoordinator = AudioCoordinator() // Decoupled Audio
-    private let hapticCoordinator = HapticCoordinator() // Decoupled Haptics
-    private let stateManager = WorkoutStateManager.shared
+    private let audioCoordinator: AudioCoordinator
+    private let hapticCoordinator: HapticCoordinator
+    private let stateManager: WorkoutStateManager
     private var workoutState: WorkoutState
     private var cancellables = Set<AnyCancellable>()
-    private var autosaveTimer: AnyCancellable?
 
     // MARK: - Performance: Display Throttling
-    // Track last update time for text displays to throttle updates to 1Hz
-    private var lastTimeTextUpdate: Date = .distantPast
-    private var lastElapsedTextUpdate: Date = .distantPast
-    private var lastRestTextUpdate: Date = .distantPast
-    private var lastRoundTextUpdate: Date = .distantPast
-    private let textUpdateInterval: TimeInterval = 1.0 // 1 second = 1Hz
+    private let throttler = DisplayThrottler()
 
     // MARK: - Round Tracking
-    private var currentSetRounds: [RoundSplitData] = []
-    private var activeWorkoutStartTime: TimeInterval = 0.0 // Excludes paused/rest time
-    private var allRoundSplits: [[RoundSplitData]] = [[]] // Array of arrays, one per set
-    private var lastRoundCompletionTime: TimeInterval = 0.0
+    private let roundTracker: RoundTracker
 
     // MARK: - Last Round Tracking (for display)
     @Published var lastRoundSplitTime: TimeInterval? = nil
@@ -66,16 +65,25 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     // Computed property for delta (current round vs last round)
     var currentRoundVsLastDelta: TimeInterval? {
         guard let lastSplit = lastRoundSplitTime, state == .running else { return nil }
-        let currentRoundElapsed = getCurrentRoundElapsed()
-        // Return positive if slower, negative if faster
+        let currentRoundElapsed = roundTracker.getCurrentRoundElapsed(currentElapsed: engine.getCurrentElapsed())
         return currentRoundElapsed - lastSplit
     }
 
     // MARK: - Initialization
-    init(configuration: TimerConfiguration, restoredState: WorkoutState? = nil) {
+    init(
+        configuration: TimerConfiguration,
+        restoredState: WorkoutState? = nil,
+        audioCoordinator: AudioCoordinator = AudioCoordinator(),
+        hapticCoordinator: HapticCoordinator = HapticCoordinator(),
+        stateManager: WorkoutStateManager = .shared
+    ) {
         self.timerConfiguration = configuration
         self.engine = TimerEngine(configuration: configuration)
-        
+        self.audioCoordinator = audioCoordinator
+        self.hapticCoordinator = hapticCoordinator
+        self.stateManager = stateManager
+        self.roundTracker = RoundTracker(numSets: configuration.numSets)
+
         // Configure Coordinators
         self.audioCoordinator.configure(timerType: configuration.timerType, numSets: configuration.numSets)
 
@@ -92,10 +100,10 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             let elapsed = restored.elapsedSeconds
             if configuration.timerType == .amrap, let total = configuration.totalDurationSeconds {
                 let remaining = Double(total) - elapsed
-                self.timeText = formatTime(max(0, remaining))
-                self.elapsedTimeText = formatTime(elapsed)
+                self.timeText = TimeFormatter.format(max(0, remaining))
+                self.elapsedTimeText = TimeFormatter.format(elapsed)
             } else {
-                self.timeText = formatTime(elapsed)
+                self.timeText = TimeFormatter.format(elapsed)
             }
         } else {
             self.workoutState = WorkoutState(configuration: configuration)
@@ -106,7 +114,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             case .amrap:
                 // AMRAP: Show configured duration (countdown timer)
                 if let total = configuration.totalDurationSeconds {
-                    self.timeText = formatTime(Double(total))
+                    self.timeText = TimeFormatter.format(Double(total))
                 } else {
                     self.timeText = "00:00"
                 }
@@ -115,7 +123,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             case .emom:
                 // EMOM: Show first interval duration
                 if let intervalDuration = configuration.intervalDurationSeconds {
-                    self.timeText = formatTime(Double(intervalDuration))
+                    self.timeText = TimeFormatter.format(Double(intervalDuration))
                 } else {
                     self.timeText = "00:00"
                 }
@@ -128,16 +136,10 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
         self.engine.delegate = self
 
-        // Initialize round tracking arrays based on number of sets
-        self.allRoundSplits = Array(repeating: [], count: configuration.numSets)
-
         // Setup background/foreground notifications for state saving
         setupLifecycleObservers()
     }
 
-    deinit {
-        stopAutosave()
-    }
 
     // MARK: - Timer Actions
     func toggleCountdownPause() {
@@ -152,7 +154,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         if state == .idle {
             workoutState.startTimestamp = Date()
             workoutState.state = .running
-            startAutosave()
         }
         engine.start()
         saveState()
@@ -160,22 +161,17 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
     func pauseTapped() {
         engine.pause()
-        stopAutosave()
         saveState()
     }
 
     func resumeTapped() {
         engine.resume()
-        startAutosave()
         saveState()
     }
 
     func resetTapped() {
         engine.reset()
-        // Reset Audio via Coordinator
         audioCoordinator.reset()
-        
-        stopAutosave()
         clearSavedState()
         repCount = 0
         roundCount = 0
@@ -185,24 +181,15 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         currentRoundTimeText = "00:00"
 
         // Reset round tracking
-        currentSetRounds = []
-        allRoundSplits = Array(repeating: [], count: timerConfiguration.numSets)
-        lastRoundCompletionTime = 0.0
-        activeWorkoutStartTime = 0.0
-        lastRoundSplitTime = nil // Reset last round tracking
+        roundTracker.resetAll(numSets: timerConfiguration.numSets)
+        lastRoundSplitTime = nil
 
-        // Reset throttle timestamps
-        lastTimeTextUpdate = .distantPast
-        lastElapsedTextUpdate = .distantPast
-        lastRestTextUpdate = .distantPast
-        lastRoundTextUpdate = .distantPast
+        // Reset display throttling
+        throttler.resetAll()
     }
 
     func finishTapped() {
-        // Note: Saving is handled automatically by timerDidChangeState(.finished)
-        // when engine.finish() changes the state. Don't save here to avoid duplicates.
         engine.finish()
-        stopAutosave()
     }
 
     func completeSetTapped() {
@@ -218,40 +205,38 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     }
 
     func completeRound() {
-        // Can only complete round during active workout (not paused, not resting, not finished)
         guard state == .running else { return }
 
         let currentTime = engine.getCurrentElapsed()
-        let splitTime = currentTime - lastRoundCompletionTime
-        let roundNumber = currentSetRounds.count + 1
+        let roundSplit = roundTracker.completeRound(currentElapsed: currentTime)
 
-        let roundSplit = RoundSplitData(
-            roundNumber: roundNumber,
-            splitTime: splitTime,
-            cumulativeTime: currentTime,
-            timestamp: Date()
-        )
-
-        currentSetRounds.append(roundSplit)
-        roundCount = currentSetRounds.count
-
-        // Store last round split time for display
-        lastRoundSplitTime = splitTime
-
-        lastRoundCompletionTime = currentTime
+        // Sync published properties from tracker
+        roundCount = roundTracker.roundCount
+        lastRoundSplitTime = roundTracker.lastRoundSplitTime
 
         // Play haptic feedback via coordinator
         hapticCoordinator.handleEvent(.counterIncrement)
 
         // Announce round completion to VoiceOver
-        let splitTimeFormatted = formatTimeForVoiceOver(splitTime)
+        let splitTimeFormatted = formatTimeForVoiceOver(roundSplit.splitTime)
         UIAccessibility.post(
             notification: .announcement,
-            argument: "Round \(roundNumber) completed. Split time: \(splitTimeFormatted)"
+            argument: "Round \(roundSplit.roundNumber) completed. Split time: \(splitTimeFormatted)"
         )
 
         // Save state after round completion
         saveState()
+    }
+
+    func undoLastRound() {
+        guard roundTracker.undoLastRound() else { return }
+        roundCount = roundTracker.roundCount
+        lastRoundSplitTime = roundTracker.lastRoundSplitTime
+        hapticCoordinator.handleEvent(.counterIncrement)
+    }
+
+    func skipCountdown() {
+        engine.skipCountdown()
     }
 
     func skipRest() {
@@ -275,19 +260,6 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             .store(in: &cancellables)
     }
 
-    private func startAutosave() {
-        // Autosave every 5 seconds while running
-        autosaveTimer = Timer.publish(every: 5.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.saveState()
-            }
-    }
-
-    private func stopAutosave() {
-        autosaveTimer?.cancel()
-        autosaveTimer = nil
-    }
 
     private func saveState() {
         guard state != .idle && state != .finished else { return }
@@ -312,37 +284,11 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     // MARK: - Round Tracking Helpers
     private func completeFinalRound() {
         guard state == .running || state == .finished else { return }
-
-        let currentTime = engine.getCurrentElapsed()
-        let splitTime = currentTime - lastRoundCompletionTime
-
-        // Only add final round if there's meaningful time elapsed
-        if splitTime > 0.1 {
-            let roundNumber = currentSetRounds.count + 1
-            let roundSplit = RoundSplitData(
-                roundNumber: roundNumber,
-                splitTime: splitTime,
-                cumulativeTime: currentTime,
-                timestamp: Date()
-            )
-            currentSetRounds.append(roundSplit)
-        }
-
-        // Save current set rounds to all rounds
-        if currentSet > 0 && currentSet <= allRoundSplits.count {
-            allRoundSplits[currentSet - 1] = currentSetRounds
-        }
+        roundTracker.completeFinalRound(currentElapsed: engine.getCurrentElapsed(), currentSet: currentSet)
     }
 
-    private func getCurrentRoundElapsed() -> TimeInterval {
-        guard state == .running else { return 0 }
-        let currentTime = engine.getCurrentElapsed()
-        return currentTime - lastRoundCompletionTime
-    }
-
-    private func saveWorkoutWithRounds(wasCompleted: Bool) {
-        // Convert RoundSplitData to PersistenceController.RoundSplitInfo
-        let roundSplitsForPersistence: [[PersistenceController.RoundSplitInfo]] = allRoundSplits.map { setRounds in
+    private func saveWorkoutWithRounds(wasCompleted: Bool, persistence: PersistenceController = .shared) {
+        let roundSplitsForPersistence: [[PersistenceController.RoundSplitInfo]] = roundTracker.allRoundSplits.map { setRounds in
             setRounds.map { roundData in
                 PersistenceController.RoundSplitInfo(
                     roundNumber: roundData.roundNumber,
@@ -353,8 +299,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             }
         }
 
-        // Save workout with round splits
-        PersistenceController.shared.saveWorkout(
+        persistence.saveWorkout(
             workoutState,
             wasCompleted: wasCompleted,
             roundSplits: roundSplitsForPersistence
@@ -366,78 +311,64 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         let now = Date()
 
         if state == .countdown {
-            // During countdown, show remaining seconds
-            if now.timeIntervalSince(lastTimeTextUpdate) >= textUpdateInterval {
+            if throttler.shouldUpdate(.time, now: now) {
                 let seconds = Int(ceil(remaining ?? 0))
                 countdownText = "\(max(1, seconds))"
-                lastTimeTextUpdate = now
             }
         } else if state == .resting {
-            // During rest, show countdown - throttled to 1Hz
-            if now.timeIntervalSince(lastRestTextUpdate) >= textUpdateInterval {
+            if throttler.shouldUpdate(.rest, now: now) {
                 restTimeText = formatTime(remaining ?? 0)
-                currentRoundTimeText = "00:00" // Don't show during rest
-                lastRestTextUpdate = now
+                currentRoundTimeText = "00:00"
             }
-            
-            // Delegate Now Playing to Coordinator
+
             audioCoordinator.updateNowPlaying(
                 timeText: "",
                 isResting: true,
                 restText: restTimeText
             )
-            
+
         } else if state == .running {
-            // During workout - throttle text updates to 1Hz
-            if now.timeIntervalSince(lastTimeTextUpdate) >= textUpdateInterval {
-                if timerConfiguration.timerType == .amrap {
-                    // AMRAP: Main display shows remaining time, secondary shows elapsed
+            if timerConfiguration.timerType == .amrap {
+                if throttler.shouldUpdate(.time, now: now) {
                     if let remaining = remaining {
                         timeText = formatTime(max(0, remaining))
                     } else {
                         timeText = formatTime(elapsed)
                     }
-                    lastTimeTextUpdate = now
                 }
-            }
-            
-            // Update elapsed time for AMRAP (throttled)
-            if timerConfiguration.timerType == .amrap {
-                if now.timeIntervalSince(lastElapsedTextUpdate) >= textUpdateInterval {
+                if throttler.shouldUpdate(.elapsed, now: now) {
                     elapsedTimeText = formatTime(elapsed)
-                    lastElapsedTextUpdate = now
                 }
             } else {
-                // Other timers: Show elapsed time (throttled)
-                if now.timeIntervalSince(lastTimeTextUpdate) >= textUpdateInterval {
+                if throttler.shouldUpdate(.time, now: now) {
                     if timerConfiguration.timerType == .emom,
                        let intervalDuration = timerConfiguration.intervalDurationSeconds {
-                        // EMOM: Show countdown within current interval
                         let intervalElapsed = elapsed.truncatingRemainder(dividingBy: Double(intervalDuration))
                         let intervalRemaining = Double(intervalDuration) - intervalElapsed
                         timeText = formatTime(max(0, intervalRemaining))
                     } else {
                         timeText = formatTime(elapsed)
                     }
-                    lastTimeTextUpdate = now
+                }
+
+                // EMOM: update total elapsed display
+                if timerConfiguration.timerType == .emom,
+                   throttler.shouldUpdate(.elapsed, now: now) {
+                    emomElapsedTimeText = formatTime(elapsed)
                 }
             }
 
-            // Update current round time (throttled)
-            if now.timeIntervalSince(lastRoundTextUpdate) >= textUpdateInterval {
-                let currentRoundElapsed = getCurrentRoundElapsed()
+            if throttler.shouldUpdate(.round, now: now) {
+                let currentRoundElapsed = roundTracker.getCurrentRoundElapsed(currentElapsed: elapsed)
                 currentRoundTimeText = formatTime(currentRoundElapsed)
-                lastRoundTextUpdate = now
             }
 
-            // Delegate Now Playing to Coordinator
             audioCoordinator.updateNowPlaying(
                 timeText: timeText,
                 isResting: false,
                 restText: ""
             )
 
-            // Update workout state (internal tracking, no UI impact)
             workoutState.elapsedSeconds = elapsed
             workoutState.lastUpdateTimestamp = Date()
         }
@@ -448,6 +379,9 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         hapticCoordinator.handleEvent(event)
         audioCoordinator.handleEvent(event)
 
+        // VoiceOver announcements for key events
+        announceEventForVoiceOver(event)
+
         // Update interval counter for EMOM
         if event == .intervalTick {
             currentInterval += 1
@@ -455,21 +389,15 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
         // Handle set completion
         if event == .setComplete {
-            // Save current set's rounds before transitioning
-            if currentSet > 0 && currentSet <= allRoundSplits.count {
-                allRoundSplits[currentSet - 1] = currentSetRounds
-            }
+            roundTracker.saveCurrentSetRounds(currentSet: currentSet)
         }
 
         // Handle rest start
         if event == .restStart {
-            // Reset for next set
-            currentSetRounds = []
+            roundTracker.resetForNewSet()
             roundCount = 0
-            lastRoundCompletionTime = 0.0
-            lastRoundSplitTime = nil // Reset last round tracking for new set
+            lastRoundSplitTime = nil
 
-            // Reset other counters
             if timerConfiguration.timerType == .forTime {
                 repCount = 0
             }
@@ -491,17 +419,11 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         currentSet = engine.currentSetNumber
 
         // Save state on state transitions
-        if newState == .resting {
-            stopAutosave()
-            saveState()
-        } else if newState == .running {
-            startAutosave()
+        if newState == .resting || newState == .running {
             saveState()
         }
 
         if newState == .finished {
-            stopAutosave()
-            // Complete final round and save workout
             completeFinalRound()
             workoutState.elapsedSeconds = engine.getCurrentElapsed()
             saveWorkoutWithRounds(wasCompleted: true)
@@ -509,38 +431,40 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         }
     }
 
-    // MARK: - Helpers
-    private func formatTime(_ seconds: TimeInterval) -> String {
-        let totalSeconds = Int(max(0, seconds))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let secs = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        } else {
-            return String(format: "%02d:%02d", minutes, secs)
+    // MARK: - VoiceOver Announcements
+    private func announceEventForVoiceOver(_ event: TimerEvent) {
+        let message: String?
+        switch event {
+        case .start:
+            message = "Workout started"
+        case .finish:
+            message = "Workout complete"
+        case .intervalTick:
+            message = "Interval \(currentInterval + 1)"
+        case .lastMinute:
+            message = "One minute remaining"
+        case .thirtySecondsLeft:
+            message = "Thirty seconds remaining"
+        case .setComplete:
+            message = "Set \(currentSet) complete"
+        case .restStart:
+            message = "Rest period"
+        case .setStart:
+            message = "Set \(currentSet) starting"
+        default:
+            message = nil
+        }
+        if let message = message {
+            UIAccessibility.post(notification: .announcement, argument: message)
         }
     }
 
+    // MARK: - Helpers
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        TimeFormatter.format(seconds)
+    }
+
     private func formatTimeForVoiceOver(_ seconds: TimeInterval) -> String {
-        let totalSeconds = Int(max(0, seconds))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let secs = totalSeconds % 60
-
-        var components: [String] = []
-
-        if hours > 0 {
-            components.append("\(hours) hour\(hours == 1 ? "" : "s")")
-        }
-        if minutes > 0 {
-            components.append("\(minutes) minute\(minutes == 1 ? "" : "s")")
-        }
-        if secs > 0 || components.isEmpty {
-            components.append("\(secs) second\(secs == 1 ? "" : "s")")
-        }
-
-        return components.joined(separator: " ")
+        TimeFormatter.formatForVoiceOver(seconds)
     }
 }

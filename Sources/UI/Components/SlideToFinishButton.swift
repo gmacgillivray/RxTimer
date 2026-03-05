@@ -51,7 +51,7 @@ struct SlideToFinishButton: View {
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                     }
                     .foregroundColor(.white.opacity(0.8))
-                    .opacity(1 - progress * 1.5) // Fades out as slider progresses
+                    .opacity(Double(1.0 - progress * 1.5)) // Fades out as slider progresses
                     Spacer()
                 }
                 .padding(.leading, thumbSize + thumbPadding * 2)
@@ -113,7 +113,6 @@ struct SlideToFinishButton: View {
         .frame(height: trackHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
-        .accessibilityAddTraits(.isButton)
         .accessibilityAction {
             // VoiceOver users can double-tap to activate
             onComplete()

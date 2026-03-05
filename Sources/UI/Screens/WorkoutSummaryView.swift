@@ -13,6 +13,7 @@ public struct RoundSplitDisplay: Equatable {
 struct WorkoutSummaryView: View {
     let data: WorkoutSummaryData
     let onDismiss: () -> Void
+    var onRepeat: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -40,12 +41,33 @@ struct WorkoutSummaryView: View {
                 // Shared content
                 WorkoutSummaryContentView(data: data, showDate: false)
 
-                // Done button
-                VStack(spacing: 12) {
-                    Button(action: {
-                        // Just call the dismiss callback - let parent handle navigation
-                        onDismiss()
-                    }) {
+                // Action buttons
+                HStack(spacing: 12) {
+                    // Repeat button (secondary)
+                    if let onRepeat = onRepeat {
+                        Button(action: onRepeat) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Repeat")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color("CardBackground"))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(statusColor.opacity(0.5), lineWidth: 1.5)
+                                    )
+                            )
+                            .foregroundColor(.white)
+                        }
+                        .accessibilityLabel("Repeat this workout")
+                    }
+
+                    // Done button (primary)
+                    Button(action: onDismiss) {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle")
                                 .font(.system(size: 18, weight: .semibold))

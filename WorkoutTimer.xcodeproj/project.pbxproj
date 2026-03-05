@@ -7,8 +7,27 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA01B2C3D4E5F6A7B8C9D0E1 /* TimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11B2C3D4E5F6A7B8C9D0E1 /* TimeFormatterTests.swift */; };
+		AA02B2C3D4E5F6A7B8C9D0E1 /* DisplayThrottlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA12B2C3D4E5F6A7B8C9D0E1 /* DisplayThrottlerTests.swift */; };
+		AA03B2C3D4E5F6A7B8C9D0E1 /* RoundTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA13B2C3D4E5F6A7B8C9D0E1 /* RoundTrackerTests.swift */; };
+		AA04B2C3D4E5F6A7B8C9D0E1 /* TimerEngineExtendedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA14B2C3D4E5F6A7B8C9D0E1 /* TimerEngineExtendedTests.swift */; };
+		AA05B2C3D4E5F6A7B8C9D0E1 /* SettingsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA15B2C3D4E5F6A7B8C9D0E1 /* SettingsManagerTests.swift */; };
+		AA06B2C3D4E5F6A7B8C9D0E1 /* AudioCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA16B2C3D4E5F6A7B8C9D0E1 /* AudioCoordinatorTests.swift */; };
+		AA07B2C3D4E5F6A7B8C9D0E1 /* HapticCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA17B2C3D4E5F6A7B8C9D0E1 /* HapticCoordinatorTests.swift */; };
+		AA08B2C3D4E5F6A7B8C9D0E1 /* TimerViewModelExtendedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA18B2C3D4E5F6A7B8C9D0E1 /* TimerViewModelExtendedTests.swift */; };
+		AA09B2C3D4E5F6A7B8C9D0E1 /* TimerDurationBugTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA19B2C3D4E5F6A7B8C9D0E1 /* TimerDurationBugTests.swift */; };
+		AA0AB2C3D4E5F6A7B8C9D0E1 /* PropertyCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1AB2C3D4E5F6A7B8C9D0E1 /* PropertyCheckTests.swift */; };
+		AA0BB2C3D4E5F6A7B8C9D0E1 /* LongDurationTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */; };
 		036B8F696CBD041142A688FD /* TimerEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4552916AF39A4DAC558FE046 /* TimerEvent.swift */; };
 		0E148EE1559409EAC1F007E6 /* HapticCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B23F450FCB0D36A8761D8937 /* HapticCoordinator.swift */; };
+		C9D0E1F2A3B4C5D6E7F8A9B0 /* TimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* TimeFormatter.swift */; };
+		D0E1F2A3B4C5D6E7F8A9B0C1 /* DisplayThrottler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* DisplayThrottler.swift */; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* RoundTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* RoundTracker.swift */; };
+		F2A3B4C5D6E7F8A9B0C1D2E3 /* InfoPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* InfoPill.swift */; };
+		A3B4C5D6E7F8A9B0C1D2E3F4 /* RoundedCornerShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* RoundedCornerShape.swift */; };
+		B4C5D6E7F8A9B0C1D2E3F4A5 /* PacingStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A7B8C9D0E1F2A3B4C5D6E7 /* PacingStatsView.swift */; };
+		C5D6E7F8A9B0C1D2E3F4A5B6 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F2A3B4C5D6E7F8 /* SettingsManager.swift */; };
+		D6E7F8A9B0C1D2E3F4A5B6C7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C9D0E1F2A3B4C5D6E7F8A9 /* SettingsView.swift */; };
 		25F40F507676274F6A55A934 /* TimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EEDE2D06894E4A567DA141 /* TimerViewModel.swift */; };
 		27035713E1CC1E9400955AA4 /* InlineConfigureTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F71F55CD9A45C76190D2A5C /* InlineConfigureTimerView.swift */; };
 		2722E44C0C5FD83841949B69 /* TimerSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21E5E7D26EBC245A348AB77 /* TimerSelectionView.swift */; };
@@ -42,6 +61,7 @@
 		EFBE5078EE3A4C98E6552AA8 /* TimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 322FCAF1F95F95765BE52DA1 /* TimerEngine.swift */; };
 		EFDCB0FF4EC3DF3C26404793 /* WorkoutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC0385396CA0989DC979712 /* WorkoutSummaryView.swift */; };
 		F69860CE6F8C05E818EB17D3 /* HapticService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD434AD686CA9B1E19061636 /* HapticService.swift */; };
+		E8F9A0B1C2D3E4F5A6B7C8D9 /* SlideToFinishButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A0B1C2D3E4F5A6B7C8D9E0 /* SlideToFinishButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,7 +80,7 @@
 		0FC7AC7E6F0263F1B2F51CE4 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutSummaryView.swift; path = Sources/UI/Screens/WorkoutSummaryView.swift; sourceTree = "<group>"; };
 		12D3D9426AD97E92FA7C8E37 /* RoundSplitData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoundSplitData.swift; sourceTree = "<group>"; };
 		12F890DA07FF7BD90FA8B772 /* QuickStartConfirmationSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = QuickStartConfirmationSheet.swift; path = Sources/UI/Components/QuickStartConfirmationSheet.swift; sourceTree = "<group>"; };
-		15009DFCECC6703F250ADFDC /* TimerViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerViewModelTests.swift; path = Tests/DomainTests/TimerViewModelTests.swift; sourceTree = "<group>"; };
+		15009DFCECC6703F250ADFDC /* TimerViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimerViewModelTests.swift; sourceTree = "<group>"; };
 		195F9293022CEE80C9E8D0C0 /* WorkoutTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WorkoutTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2317A3EAFCC9FF6CC1538FFD /* WorkoutStateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutStateManager.swift; sourceTree = "<group>"; };
 		24EE43DFB8A2036994FB1343 /* TimerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerType.swift; sourceTree = "<group>"; };
@@ -78,7 +98,7 @@
 		4552916AF39A4DAC558FE046 /* TimerEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimerEvent.swift; sourceTree = "<group>"; };
 		51570F093954B65F706F7C19 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		56257AB8AEC0E93AE14629CB /* TimerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerState.swift; sourceTree = "<group>"; };
-		65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LongDurationTimingTests.swift; path = Tests/DomainTests/LongDurationTimingTests.swift; sourceTree = "<group>"; };
+		65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LongDurationTimingTests.swift; sourceTree = "<group>"; };
 		6775CB8C0A32B833AE93D25B /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
 		6888E08EA1AD4E654D5C5308 /* TimingDriftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimingDriftTests.swift; sourceTree = "<group>"; };
 		6F71F55CD9A45C76190D2A5C /* InlineConfigureTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineConfigureTimerView.swift; sourceTree = "<group>"; };
@@ -88,7 +108,7 @@
 		B21E5E7D26EBC245A348AB77 /* TimerSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimerSelectionView.swift; sourceTree = "<group>"; };
 		B23F450FCB0D36A8761D8937 /* HapticCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticCoordinator.swift; sourceTree = "<group>"; };
 		B91E87E1E58959B191C6AA36 /* WorkoutHistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkoutHistoryView.swift; path = Sources/UI/Screens/WorkoutHistoryView.swift; sourceTree = "<group>"; };
-		BE2A76547EB23108DECD6D01 /* StateRestorationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StateRestorationTests.swift; path = Tests/DomainTests/StateRestorationTests.swift; sourceTree = "<group>"; };
+		BE2A76547EB23108DECD6D01 /* StateRestorationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StateRestorationTests.swift; sourceTree = "<group>"; };
 		C03E2F0139BBB5F41F52E447 /* TimerSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimerSelectionView.swift; path = Sources/UI/Screens/TimerSelectionView.swift; sourceTree = "<group>"; };
 		D446CAAAE89B233DF0EA0768 /* Workout+DisplayData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Workout+DisplayData.swift"; sourceTree = "<group>"; };
 		D73555C4A91B4E9B54E92190 /* TimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerView.swift; sourceTree = "<group>"; };
@@ -106,6 +126,25 @@
 		F75A1D91007BB127A056496B /* BigTimeDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigTimeDisplay.swift; sourceTree = "<group>"; };
 		FD434AD686CA9B1E19061636 /* HapticService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticService.swift; sourceTree = "<group>"; };
 		FD781737912097014A983ACD /* MainContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainContainerView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* TimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatter.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* DisplayThrottler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayThrottler.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B8C9D0E1F2A3B4 /* RoundTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundTracker.swift; sourceTree = "<group>"; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* InfoPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoPill.swift; sourceTree = "<group>"; };
+		E5F6A7B8C9D0E1F2A3B4C5D6 /* RoundedCornerShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundedCornerShape.swift; sourceTree = "<group>"; };
+		F6A7B8C9D0E1F2A3B4C5D6E7 /* PacingStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacingStatsView.swift; sourceTree = "<group>"; };
+		A7B8C9D0E1F2A3B4C5D6E7F8 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		B8C9D0E1F2A3B4C5D6E7F8A9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F9A0B1C2D3E4F5A6B7C8D9E0 /* SlideToFinishButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideToFinishButton.swift; sourceTree = "<group>"; };
+		AA11B2C3D4E5F6A7B8C9D0E1 /* TimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatterTests.swift; sourceTree = "<group>"; };
+		AA12B2C3D4E5F6A7B8C9D0E1 /* DisplayThrottlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayThrottlerTests.swift; sourceTree = "<group>"; };
+		AA13B2C3D4E5F6A7B8C9D0E1 /* RoundTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundTrackerTests.swift; sourceTree = "<group>"; };
+		AA14B2C3D4E5F6A7B8C9D0E1 /* TimerEngineExtendedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerEngineExtendedTests.swift; sourceTree = "<group>"; };
+		AA15B2C3D4E5F6A7B8C9D0E1 /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
+		AA16B2C3D4E5F6A7B8C9D0E1 /* AudioCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCoordinatorTests.swift; sourceTree = "<group>"; };
+		AA17B2C3D4E5F6A7B8C9D0E1 /* HapticCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticCoordinatorTests.swift; sourceTree = "<group>"; };
+		AA18B2C3D4E5F6A7B8C9D0E1 /* TimerViewModelExtendedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerViewModelExtendedTests.swift; sourceTree = "<group>"; };
+		AA19B2C3D4E5F6A7B8C9D0E1 /* TimerDurationBugTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDurationBugTests.swift; sourceTree = "<group>"; };
+		AA1AB2C3D4E5F6A7B8C9D0E1 /* PropertyCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyCheckTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +224,10 @@
 				F75A1D91007BB127A056496B /* BigTimeDisplay.swift */,
 				F25B605ED1FF3384317A3E8A /* WorkoutSummaryContentView.swift */,
 				DEE5E181EC4B2C8C3F7B5AA3 /* TimerTypeCard.swift */,
+				D4E5F6A7B8C9D0E1F2A3B4C5 /* InfoPill.swift */,
+				E5F6A7B8C9D0E1F2A3B4C5D6 /* RoundedCornerShape.swift */,
+				F6A7B8C9D0E1F2A3B4C5D6E7 /* PacingStatsView.swift */,
+				F9A0B1C2D3E4F5A6B7C8D9E0 /* SlideToFinishButton.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -193,7 +236,6 @@
 			isa = PBXGroup;
 			children = (
 				E82314D1AED0D888F3B525CC /* DomainTests */,
-				15009DFCECC6703F250ADFDC /* TimerViewModelTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -226,6 +268,7 @@
 				F39E34AF23906125A657213F /* WorkoutDetailView.swift */,
 				8988304F814D9BE38F446969 /* WorkoutHistoryView.swift */,
 				0BC0385396CA0989DC979712 /* WorkoutSummaryView.swift */,
+				B8C9D0E1F2A3B4C5D6E7F8A9 /* SettingsView.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -236,9 +279,19 @@
 				E3EEF78AC67933824D83D3B4 /* ViewModels */,
 				73578CFB312B318FC7348DB6 /* Screens */,
 				508B330CCDE923938D8FFB64 /* Components */,
+				E7F8A9B0C1D2E3F4A5B6C7D8 /* Utilities */,
 				EAA254D6F28075E0A6D5E3CB /* Navigation */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		E7F8A9B0C1D2E3F4A5B6C7D8 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* TimeFormatter.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* DisplayThrottler.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		840E4C7F83D8A80EC003E8D0 /* Domain */ = {
@@ -246,6 +299,7 @@
 			children = (
 				C2B2C90D486CB339AA37D21B /* Engine */,
 				CA608C0B22E7B6F9B389BDDD /* Models */,
+				C3D4E5F6A7B8C9D0E1F2A3B4 /* RoundTracker.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -260,6 +314,7 @@
 				2317A3EAFCC9FF6CC1538FFD /* WorkoutStateManager.swift */,
 				385C07ABA788461F82D1813A /* AudioCoordinator.swift */,
 				B23F450FCB0D36A8761D8937 /* HapticCoordinator.swift */,
+				A7B8C9D0E1F2A3B4C5D6E7F8 /* SettingsManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -360,7 +415,6 @@
 		D940E233564734C0069EF29C /* DomainTests */ = {
 			isa = PBXGroup;
 			children = (
-				65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -379,6 +433,18 @@
 			children = (
 				6888E08EA1AD4E654D5C5308 /* TimingDriftTests.swift */,
 				BE2A76547EB23108DECD6D01 /* StateRestorationTests.swift */,
+				15009DFCECC6703F250ADFDC /* TimerViewModelTests.swift */,
+				65964A40D3B7770E061C79DB /* LongDurationTimingTests.swift */,
+				AA11B2C3D4E5F6A7B8C9D0E1 /* TimeFormatterTests.swift */,
+				AA12B2C3D4E5F6A7B8C9D0E1 /* DisplayThrottlerTests.swift */,
+				AA13B2C3D4E5F6A7B8C9D0E1 /* RoundTrackerTests.swift */,
+				AA14B2C3D4E5F6A7B8C9D0E1 /* TimerEngineExtendedTests.swift */,
+				AA15B2C3D4E5F6A7B8C9D0E1 /* SettingsManagerTests.swift */,
+				AA16B2C3D4E5F6A7B8C9D0E1 /* AudioCoordinatorTests.swift */,
+				AA17B2C3D4E5F6A7B8C9D0E1 /* HapticCoordinatorTests.swift */,
+				AA18B2C3D4E5F6A7B8C9D0E1 /* TimerViewModelExtendedTests.swift */,
+				AA19B2C3D4E5F6A7B8C9D0E1 /* TimerDurationBugTests.swift */,
+				AA1AB2C3D4E5F6A7B8C9D0E1 /* PropertyCheckTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -503,6 +569,17 @@
 				2E89C91142AFADD595DF5A2D /* TimingDriftTests.swift in Sources */,
 				6F7F9A401918B8002A9FE0C6 /* StateRestorationTests.swift in Sources */,
 				53510CF271C02326459E18B4 /* TimerViewModelTests.swift in Sources */,
+				AA0BB2C3D4E5F6A7B8C9D0E1 /* LongDurationTimingTests.swift in Sources */,
+				AA01B2C3D4E5F6A7B8C9D0E1 /* TimeFormatterTests.swift in Sources */,
+				AA02B2C3D4E5F6A7B8C9D0E1 /* DisplayThrottlerTests.swift in Sources */,
+				AA03B2C3D4E5F6A7B8C9D0E1 /* RoundTrackerTests.swift in Sources */,
+				AA04B2C3D4E5F6A7B8C9D0E1 /* TimerEngineExtendedTests.swift in Sources */,
+				AA05B2C3D4E5F6A7B8C9D0E1 /* SettingsManagerTests.swift in Sources */,
+				AA06B2C3D4E5F6A7B8C9D0E1 /* AudioCoordinatorTests.swift in Sources */,
+				AA07B2C3D4E5F6A7B8C9D0E1 /* HapticCoordinatorTests.swift in Sources */,
+				AA08B2C3D4E5F6A7B8C9D0E1 /* TimerViewModelExtendedTests.swift in Sources */,
+				AA09B2C3D4E5F6A7B8C9D0E1 /* TimerDurationBugTests.swift in Sources */,
+				AA0AB2C3D4E5F6A7B8C9D0E1 /* PropertyCheckTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -540,6 +617,15 @@
 				888692818D5C652F3DD21A93 /* RoundSplitData.swift in Sources */,
 				C4BDB769EAED52845599F6BD /* AudioCoordinator.swift in Sources */,
 				0E148EE1559409EAC1F007E6 /* HapticCoordinator.swift in Sources */,
+				C9D0E1F2A3B4C5D6E7F8A9B0 /* TimeFormatter.swift in Sources */,
+				D0E1F2A3B4C5D6E7F8A9B0C1 /* DisplayThrottler.swift in Sources */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* RoundTracker.swift in Sources */,
+				F2A3B4C5D6E7F8A9B0C1D2E3 /* InfoPill.swift in Sources */,
+				A3B4C5D6E7F8A9B0C1D2E3F4 /* RoundedCornerShape.swift in Sources */,
+				B4C5D6E7F8A9B0C1D2E3F4A5 /* PacingStatsView.swift in Sources */,
+				C5D6E7F8A9B0C1D2E3F4A5B6 /* SettingsManager.swift in Sources */,
+				D6E7F8A9B0C1D2E3F4A5B6C7 /* SettingsView.swift in Sources */,
+				E8F9A0B1C2D3E4F5A6B7C8D9 /* SlideToFinishButton.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

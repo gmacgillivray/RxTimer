@@ -2,8 +2,15 @@ import Foundation
 import Combine
 
 class AudioCoordinator {
-    private let audio = AudioService.shared
-    private let backgroundAudio = BackgroundAudioService.shared
+    private let audio: AudioService
+    private let backgroundAudio: BackgroundAudioService
+    private let settings: SettingsManager
+
+    init(audioService: AudioService = .shared, backgroundAudioService: BackgroundAudioService = .shared, settings: SettingsManager = .shared) {
+        self.audio = audioService
+        self.backgroundAudio = backgroundAudioService
+        self.settings = settings
+    }
     
     // Store configuration to handle Now Playing updates
     private var timerType: TimerType?
@@ -78,8 +85,11 @@ class AudioCoordinator {
     }
     
     private func playAudioForEvent(_ event: TimerEvent) {
+        guard settings.audioEnabled else { return }
+
         switch event {
         case .countdown(let seconds):
+            guard settings.countdownSoundsEnabled else { return }
             switch seconds {
             case 3: audio.play(sound: "three")
             case 2: audio.play(sound: "two")
