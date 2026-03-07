@@ -7,6 +7,9 @@ struct MainContainerView: View {
     // Transient data carried between navigation states
     @State private var pendingWorkoutSummary: WorkoutSummaryData?
 
+    // Summary presented from within the workout cover (avoids home screen flash)
+    @State private var workoutSummary: WorkoutSummaryData?
+
     // State restoration prompt
     @State private var pendingRestoredState: WorkoutState?
     @State private var showRestorePrompt: Bool = false
@@ -37,30 +40,23 @@ struct MainContainerView: View {
                     restoredState: restoredState,
                     onWorkoutStateChange: { _ in },
                     onFinish: { summary in
-                        navState = .summary(summary)
+                        workoutSummary = summary
                     }
                 )
-            }
-        }
-        // Summary full-screen cover
-        .fullScreenCover(isPresented: Binding(
-            get: {
-                if case .summary = navState { return true }
-                return false
-            },
-            set: { if !$0 { navState = .home } }
-        )) {
-            if case .summary(let summary) = navState {
-                WorkoutSummaryView(
-                    data: summary,
-                    onDismiss: {
-                        navState = .home
-                    },
-                    onRepeat: {
-                        let config = summary.configuration
-                        navState = .activeWorkout(config, restoredState: nil)
-                    }
-                )
+                .fullScreenCover(item: $workoutSummary) { summary in
+                    WorkoutSummaryView(
+                        data: summary,
+                        onDismiss: {
+                            workoutSummary = nil
+                            navState = .home
+                        },
+                        onRepeat: {
+                            let config = summary.configuration
+                            workoutSummary = nil
+                            navState = .activeWorkout(config, restoredState: nil)
+                        }
+                    )
+                }
             }
         }
         // Workout completion summary (from config views)

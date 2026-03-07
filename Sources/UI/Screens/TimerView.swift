@@ -6,7 +6,7 @@ struct TimerView: View {
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.verticalSizeClass) var verticalSizeClass
-    @State private var areDetailsExpanded: Bool = true
+    @State private var areDetailsExpanded: Bool = false
     @State private var timeDisplayPressed: Bool = false
     @State private var isWiderThanTall: Bool = false
     @State private var pausePulse: Bool = false

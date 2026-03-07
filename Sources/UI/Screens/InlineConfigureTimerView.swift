@@ -353,6 +353,10 @@ struct InlineTimePicker: View {
     @State private var minutes: Int = 0
     @State private var seconds: Int = 0
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header (Always Visible)
@@ -363,19 +367,21 @@ struct InlineTimePicker: View {
             }) {
                 HStack {
                     Text(title)
+                        .font(isIPad ? .system(size: 20, weight: .medium) : .body)
                         .foregroundColor(.primary)
                     Spacer()
                     HStack {
                         Text(formatSeconds(selection))
+                            .font(isIPad ? .system(size: 18) : .body)
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(isIPad ? .footnote : .caption)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                             .foregroundColor(.gray)
                     }
                     .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 8)
-                .contentShape(Rectangle()) // Make full width tappable
+                .padding(.vertical, isIPad ? 12 : 8)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -402,7 +408,7 @@ struct InlineTimePicker: View {
                         .frame(maxWidth: .infinity)
                         .clipped()
                     }
-                    .frame(height: 150)
+                    .frame(height: isIPad ? 180 : 150)
                 }
                 .onAppear {
                     syncWheels(from: selection)
@@ -571,46 +577,85 @@ struct BigStepper: View {
     let range: ClosedRange<Int>
     let color: Color
 
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.body)
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            HStack(spacing: 20) {
-                Button(action: {
-                    if value > range.lowerBound {
-                        value -= 1
-                    }
-                }) {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
-                }
-                .buttonStyle(.plain)
-                .disabled(value <= range.lowerBound)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-                Text("\(value)")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .frame(minWidth: 30)
-                    .multilineTextAlignment(.center)
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
+    var body: some View {
+        if isIPad {
+            // iPad: vertical layout keeps label and controls grouped
+            VStack(spacing: 12) {
+                Text(title)
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.primary)
 
-                Button(action: {
-                    if value < range.upperBound {
-                        value += 1
+                HStack(spacing: 24) {
+                    Button(action: {
+                        if value > range.lowerBound { value -= 1 }
+                    }) {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
                     }
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
+                    .buttonStyle(.plain)
+                    .disabled(value <= range.lowerBound)
+
+                    Text("\(value)")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .frame(minWidth: 40)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.primary)
+
+                    Button(action: {
+                        if value < range.upperBound { value += 1 }
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(value >= range.upperBound)
                 }
-                .buttonStyle(.plain)
-                .disabled(value >= range.upperBound)
             }
+            .padding(.vertical, 8)
+        } else {
+            // iPhone: horizontal layout
+            HStack {
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                HStack(spacing: 20) {
+                    Button(action: {
+                        if value > range.lowerBound { value -= 1 }
+                    }) {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(value <= range.lowerBound)
+
+                    Text("\(value)")
+                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                        .frame(minWidth: 30)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.primary)
+
+                    Button(action: {
+                        if value < range.upperBound { value += 1 }
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(value >= range.upperBound)
+                }
+            }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
     }
 }
