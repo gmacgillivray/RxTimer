@@ -68,16 +68,18 @@ struct InlineConfigureTimerView: View {
                         case .emom:
                             emomSection
                         }
-                        
+
                         // Common Settings
                         multiSetSection
-                        
+
                         // Bottom spacer for sticky button
                         Spacer()
                             .frame(height: 80)
                     }
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 600 : .infinity)
                     .padding(.horizontal)
                     .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity) // Center the constrained content
                 }
             }
             
@@ -197,12 +199,12 @@ struct InlineConfigureTimerView: View {
                     Divider()
                     HStack {
                         Text("Total Workout Time")
+                            .font(horizontalSizeClass == .regular ? .system(size: 20, weight: .medium) : .body.weight(.medium))
                             .foregroundColor(.primary)
-                            .fontWeight(.medium)
                         Spacer()
                         Text(formatSeconds(total))
+                            .font(horizontalSizeClass == .regular ? .system(size: 18, weight: .medium) : .body.weight(.medium))
                             .foregroundColor(.secondary)
-                            .fontWeight(.medium)
                     }
                     .padding(.top, 4)
                 }
@@ -263,36 +265,44 @@ struct ConfigurationHeader: View {
     let iconName: String
     let iconColor: Color
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: isIPad ? 24 : 20) {
             Image(systemName: iconName)
-                .font(.system(size: 40))
+                .font(.system(size: isIPad ? 50 : 40))
                 .foregroundColor(.white)
-                .frame(width: 70, height: 70)
+                .frame(width: isIPad ? 85 : 70, height: isIPad ? 85 : 70)
                 .background(iconColor)
                 .clipShape(Circle())
                 .shadow(color: iconColor.opacity(0.4), radius: 8, x: 0, y: 4)
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.title2)
+                    .font(isIPad ? .title : .title2)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
-                
+
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(isIPad ? .body : .subheadline)
                     .foregroundColor(.secondary)
             }
         }
         .padding(.top, 20)
         .padding(.horizontal)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: isIPad ? 600 : .infinity, alignment: .leading)
     }
 }
 
 struct ConfigurationCard<Content: View>: View {
     let title: String
     let content: Content
+
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool { horizontalSizeClass == .regular }
 
     init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -302,15 +312,14 @@ struct ConfigurationCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title.uppercased())
-                .font(.caption)
-                .fontWeight(.bold)
+                .font(isIPad ? .footnote.weight(.bold) : .caption.weight(.bold))
                 .foregroundColor(.secondary)
                 .padding(.leading, 4)
-            
+
             VStack {
                 content
             }
-            .padding()
+            .padding(isIPad ? 20 : 16)
             .background(Color(UIColor.secondarySystemGroupedBackground))
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
@@ -322,14 +331,18 @@ struct StickyStartButton: View {
     let action: () -> Void
     let color: Color
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
         VStack {
             Button(action: action) {
                 Text("Start Workout")
-                    .font(.headline)
+                    .font(isIPad ? .title3.weight(.semibold) : .headline)
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                    .frame(maxWidth: isIPad ? 600 : .infinity)
+                    .padding(isIPad ? 18 : 16)
                     .background(color)
                     .cornerRadius(16)
                     .shadow(color: color.opacity(0.4), radius: 8, x: 0, y: 4)
@@ -456,6 +469,10 @@ struct InlineOptionalTimePicker: View {
     @State private var minutes: Int = 0
     @State private var seconds: Int = 0
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -466,22 +483,25 @@ struct InlineOptionalTimePicker: View {
             }) {
                 HStack {
                     Text(title)
+                        .font(isIPad ? .system(size: 20, weight: .medium) : .body)
                         .foregroundColor(.primary)
                     Spacer()
                     HStack {
                         if let val = selection {
                             Text(formatSeconds(val))
+                                .font(isIPad ? .system(size: 18) : .body)
                         } else {
                             Text("No Time Cap")
+                                .font(isIPad ? .system(size: 18) : .body)
                         }
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(isIPad ? .footnote : .caption)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                             .foregroundColor(.gray)
                     }
                     .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, isIPad ? 12 : 8)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -490,7 +510,7 @@ struct InlineOptionalTimePicker: View {
             if isExpanded {
                 VStack(spacing: 16) {
                     Divider()
-                    
+
                     // No Time Cap Toggle
                     Toggle("No Time Cap", isOn: Binding(
                         get: { selection == nil },
@@ -525,7 +545,7 @@ struct InlineOptionalTimePicker: View {
                             .frame(maxWidth: .infinity)
                             .clipped()
                         }
-                        .frame(height: 150)
+                        .frame(height: isIPad ? 180 : 150)
                     }
                 }
                 .onAppear {
