@@ -13,13 +13,13 @@ final class LastWorkoutStore: ObservableObject {
         self.stateManager = stateManager
         if let data = userDefaults.data(forKey: Self.storageKey),
            let saved = try? JSONDecoder().decode(TimerConfiguration.self, from: data),
-           Self.isValid(saved) {
+           saved.isUsable {
             configuration = saved
         }
     }
 
     func recordStartedWorkout(_ configuration: TimerConfiguration) {
-        guard Self.isValid(configuration), let data = try? JSONEncoder().encode(configuration) else { return }
+        guard configuration.isUsable, let data = try? JSONEncoder().encode(configuration) else { return }
         userDefaults.set(data, forKey: Self.storageKey)
         self.configuration = configuration
     }
@@ -31,18 +31,48 @@ final class LastWorkoutStore: ObservableObject {
         return timer
     }
 
-    private static func isValid(_ configuration: TimerConfiguration) -> Bool {
-        guard configuration.numSets > 0, (configuration.restDurationSeconds ?? 0) >= 0 else { return false }
-        switch configuration.timerType {
+}
+
+extension TimerConfiguration {
+    var isUsable: Bool {
+        let maximumTime = 99 * 60 + 59
+        guard (1...10).contains(numSets), (0...maximumTime).contains(restDurationSeconds ?? 0) else { return false }
+        switch timerType {
         case .forTime:
-            return (configuration.timeCapSeconds ?? 1) > 0
+            return (1...maximumTime).contains(timeCapSeconds ?? 1)
         case .amrap:
-            return (configuration.durationSeconds ?? 0) > 0
+            return (1...maximumTime).contains(durationSeconds ?? 0)
         case .emom:
-            guard let count = configuration.numIntervals, count > 0,
-                  let duration = configuration.intervalDurationSeconds, duration > 0 else { return false }
-            return !count.multipliedReportingOverflow(by: duration).overflow
+            return (1...60).contains(numIntervals ?? 0)
+                && (1...maximumTime).contains(intervalDurationSeconds ?? 0)
         }
+    }
+
+    func workoutDetails(spoken: Bool = false) -> String {
+        func time(_ seconds: Int) -> String {
+            if spoken { return TimeFormatter.formatForVoiceOver(Double(seconds)) }
+            let formatted = TimeFormatter.format(Double(seconds))
+            return formatted.hasPrefix("0") ? String(formatted.dropFirst()) : formatted
+        }
+
+        var details: [String] = []
+        switch timerType {
+        case .forTime:
+            details.append(timeCapSeconds.map { "\(time($0)) cap" } ?? "No time cap")
+        case .amrap:
+            if let durationSeconds { details.append(time(durationSeconds)) }
+        case .emom:
+            if let numIntervals, let intervalDurationSeconds {
+                let duration = time(intervalDurationSeconds)
+                details.append(spoken ? "\(numIntervals) intervals of \(duration)" : "\(numIntervals) × \(duration)")
+            }
+        }
+        if numSets > 1 {
+            details.append("\(numSets) sets")
+            let rest = restDurationSeconds ?? 0
+            details.append(rest == 0 ? "No rest" : "\(time(rest)) rest")
+        }
+        return details.joined(separator: spoken ? ", " : " · ")
     }
 }
 
@@ -56,15 +86,17 @@ final class TimerSelectionViewModel: ObservableObject {
 
     // MARK: - Configuration Storage
 
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
     private let configKeyPrefix = "LastUsedConfig"
 
     // MARK: - Initialization
 
     init(
         onSelectTimer: @escaping (TimerType) -> Void,
-        onNavigateToHistory: @escaping () -> Void
+        onNavigateToHistory: @escaping () -> Void,
+        userDefaults: UserDefaults = .standard
     ) {
+        self.userDefaults = userDefaults
         self.onSelectTimer = onSelectTimer
         self.onNavigateToHistory = onNavigateToHistory
     }
@@ -77,7 +109,8 @@ final class TimerSelectionViewModel: ObservableObject {
 
         // Try loading saved configuration
         if let data = userDefaults.data(forKey: key),
-           let config = try? JSONDecoder().decode(TimerConfiguration.self, from: data) {
+           let config = try? JSONDecoder().decode(TimerConfiguration.self, from: data),
+           config.timerType == timerType, config.isUsable {
             return config
         }
 
@@ -89,9 +122,8 @@ final class TimerSelectionViewModel: ObservableObject {
     func saveConfiguration(_ config: TimerConfiguration) {
         let key = "\(configKeyPrefix).\(config.timerType.rawValue)"
 
-        if let data = try? JSONEncoder().encode(config) {
+        if config.isUsable, let data = try? JSONEncoder().encode(config) {
             userDefaults.set(data, forKey: key)
-            userDefaults.synchronize()
         }
     }
 

@@ -11,22 +11,25 @@ struct TimerSelectionView: View {
 
     // Internal navigation state
     @State private var showingConfiguration = false
-    @State private var selectedTimerType: TimerType?
+    @State private var selectedConfiguration: TimerConfiguration?
     @State private var showingSettings = false
 
     // Callbacks
     let onWorkoutComplete: (WorkoutSummaryData) -> Void
     let onStartWorkout: (TimerConfiguration) -> Void
+    let quickStartConfiguration: TimerConfiguration?
     let onQuickStart: (() -> Void)?
 
     init(
         onNavigateToHistory: @escaping () -> Void,
         onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
         onStartWorkout: @escaping (TimerConfiguration) -> Void,
+        quickStartConfiguration: TimerConfiguration? = nil,
         onQuickStart: (() -> Void)? = nil
     ) {
         self.onWorkoutComplete = onWorkoutComplete
         self.onStartWorkout = onStartWorkout
+        self.quickStartConfiguration = quickStartConfiguration
         self.onQuickStart = onQuickStart
         _viewModel = StateObject(
             wrappedValue: TimerSelectionViewModel(
@@ -78,20 +81,21 @@ struct TimerSelectionView: View {
     private var navigationLinks: some View {
         ZStack {
             // Configuration navigation
-            if let timerType = selectedTimerType {
+            if let configuration = selectedConfiguration {
                 NavigationLink(
                     destination: InlineConfigureTimerView(
-                        timerType: timerType,
+                        configuration: configuration,
                         onStart: { config in
                             // Dismiss config view and start workout
                             showingConfiguration = false
-                            selectedTimerType = nil
+                            selectedConfiguration = nil
+                            viewModel.saveConfiguration(config)
                             onStartWorkout(config)
                         },
                         onWorkoutComplete: onWorkoutComplete,
                         onCancel: {
                             showingConfiguration = false
-                            selectedTimerType = nil
+                            selectedConfiguration = nil
                         }
                     ),
                     isActive: $showingConfiguration
@@ -123,11 +127,12 @@ struct TimerSelectionView: View {
             // Timer cards
             VStack(spacing: 16) {
                 ForEach(TimerType.allCases, id: \.self) { timerType in
+                    let configuration = viewModel.configuration(for: timerType)
                     TimerTypeCard(
                         timerType: timerType,
-                        configuration: viewModel.configuration(for: timerType),
+                        configuration: configuration,
                         onTap: {
-                            selectedTimerType = timerType
+                            selectedConfiguration = configuration
                             showingConfiguration = true
                         }
                     )
@@ -160,11 +165,12 @@ struct TimerSelectionView: View {
                 spacing: 24
             ) {
                 ForEach(TimerType.allCases, id: \.self) { timerType in
+                    let configuration = viewModel.configuration(for: timerType)
                     TimerTypeCard(
                         timerType: timerType,
-                        configuration: viewModel.configuration(for: timerType),
+                        configuration: configuration,
                         onTap: {
-                            selectedTimerType = timerType
+                            selectedConfiguration = configuration
                             showingConfiguration = true
                         }
                     )
@@ -203,7 +209,7 @@ struct TimerSelectionView: View {
                 ))
                 .foregroundColor(.white.opacity(0.6))
 
-            if let onQuickStart {
+            if let onQuickStart, let configuration = quickStartConfiguration {
                 Button(action: onQuickStart) {
                     Label("Start last workout", systemImage: "play.fill")
                         .font(.headline)
@@ -211,6 +217,13 @@ struct TimerSelectionView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("startLastWorkout")
+                .accessibilityValue("\(configuration.timerType.displayName), \(configuration.workoutDetails(spoken: true))")
+
+                Text("\(configuration.timerType.displayName) · \(configuration.workoutDetails())")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

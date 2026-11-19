@@ -26,7 +26,8 @@ struct MainContainerView: View {
             onStartWorkout: { config in
                 navState = .activeWorkout(config, restoredState: nil)
             },
-            onQuickStart: lastWorkout.configuration == nil ? nil : startLastWorkout
+            quickStartConfiguration: lastWorkout.configuration,
+            onQuickStart: startLastWorkout
         )
         // Active workout full-screen cover
         .fullScreenCover(isPresented: Binding(

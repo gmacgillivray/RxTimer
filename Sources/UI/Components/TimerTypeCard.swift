@@ -86,7 +86,7 @@ struct TimerTypeCard: View {
         .padding(.vertical, 16)
         .background(Color.white.opacity(0.03))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Last used configuration: \(configurationSummary)")
+        .accessibilityLabel("Last used configuration: \(configuration.workoutDetails(spoken: true))")
     }
 
     // MARK: - Background
@@ -149,42 +149,8 @@ struct TimerTypeCard: View {
         }
     }
 
-    /// Human-readable summary of last used configuration
     private var configurationSummary: String {
-        switch timerType {
-        case .forTime:
-            if let cap = configuration.timeCapSeconds {
-                let minutes = cap / 60
-                let seconds = cap % 60
-                if seconds == 0 {
-                    return "\(minutes) minute time cap"
-                } else {
-                    return "\(minutes):\(String(format: "%02d", seconds)) time cap"
-                }
-            } else {
-                return "No time cap"
-            }
-
-        case .amrap:
-            if let duration = configuration.durationSeconds {
-                let minutes = duration / 60
-                let seconds = duration % 60
-                if seconds == 0 {
-                    return "\(minutes) minutes"
-                } else {
-                    return "\(minutes):\(String(format: "%02d", seconds))"
-                }
-            }
-            return "Not configured"
-
-        case .emom:
-            if let intervals = configuration.numIntervals,
-               let intervalDuration = configuration.intervalDurationSeconds {
-                let totalMinutes = (intervals * intervalDuration) / 60
-                return "\(intervals) rounds × \(intervalDuration)s (\(totalMinutes) min total)"
-            }
-            return "Not configured"
-        }
+        configuration.workoutDetails()
     }
 }
 
