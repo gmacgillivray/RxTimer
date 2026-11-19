@@ -10,7 +10,7 @@ enum AppNavigationState: Equatable {
     case configuration(TimerType)
 
     /// Active workout in progress
-    case activeWorkout(TimerConfiguration, restoredState: WorkoutState?)
+    case activeWorkout(TimerConfiguration, restoredState: WorkoutState?, startedTimer: TimerViewModel? = nil)
 
     /// Showing workout summary after completion
     case summary(WorkoutSummaryData)
@@ -27,7 +27,7 @@ enum AppNavigationState: Equatable {
             return true
         case (.configuration(let lhsType), .configuration(let rhsType)):
             return lhsType == rhsType
-        case (.activeWorkout(let lhsConfig, _), .activeWorkout(let rhsConfig, _)):
+        case (.activeWorkout(let lhsConfig, _, _), .activeWorkout(let rhsConfig, _, _)):
             return lhsConfig.timerType == rhsConfig.timerType
         case (.summary(let lhsData), .summary(let rhsData)):
             return lhsData == rhsData

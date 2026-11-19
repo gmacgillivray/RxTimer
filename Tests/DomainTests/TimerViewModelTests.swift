@@ -36,6 +36,84 @@ final class TimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .countdown)
     }
 
+    func testQuickStartReloadsLastWorkoutAndStartsFreshCountdown() throws {
+        let suite = "RxTimer.QuickStart.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let stateManager = WorkoutStateManager(userDefaults: defaults)
+        let configuration = TimerConfiguration(
+            timerType: .emom,
+            numIntervals: 7,
+            intervalDurationSeconds: 45,
+            numSets: 2,
+            restDurationSeconds: 35
+        )
+
+        do {
+            let originalLaunch = LastWorkoutStore(userDefaults: defaults, stateManager: stateManager)
+            let original = TimerViewModel(
+                configuration: configuration,
+                stateManager: stateManager,
+                onWorkoutStarted: originalLaunch.recordStartedWorkout
+            )
+            defer { original.resetTapped() }
+            original.startTapped()
+            original.skipCountdown()
+            original.completeRound()
+            XCTAssertEqual(original.roundCount, 1)
+        }
+
+        let reloadedDefaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let reloadedLaunch = LastWorkoutStore(
+            userDefaults: reloadedDefaults,
+            stateManager: WorkoutStateManager(userDefaults: reloadedDefaults)
+        )
+        let quickStart = try XCTUnwrap(reloadedLaunch.startLastWorkout(), "A workout started before relaunch should be available")
+        defer { quickStart.resetTapped() }
+
+        XCTAssertEqual(quickStart.configuration, configuration)
+        XCTAssertEqual(quickStart.state, .countdown)
+        XCTAssertEqual(quickStart.getCurrentElapsed(), 0)
+        XCTAssertEqual(quickStart.currentSet, 1)
+        XCTAssertEqual(quickStart.roundCount, 0)
+        XCTAssertEqual(quickStart.repCount, 0)
+    }
+
+    func testQuickStartUsesTheLatestModeAndIgnoresInvalidStorage() throws {
+        let suite = "RxTimer.QuickStart.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let stateManager = WorkoutStateManager(userDefaults: defaults)
+        let emom = TimerConfiguration(timerType: .emom, numIntervals: 7, intervalDurationSeconds: 45)
+        let amrap = TimerConfiguration(timerType: .amrap, durationSeconds: 420)
+
+        let freshLaunch = LastWorkoutStore(userDefaults: defaults, stateManager: stateManager)
+        XCTAssertNil(freshLaunch.configuration)
+        XCTAssertNil(freshLaunch.startLastWorkout())
+
+        defaults.set(Data("invalid".utf8), forKey: LastWorkoutStore.storageKey)
+        let launch = LastWorkoutStore(userDefaults: defaults, stateManager: stateManager)
+        XCTAssertNil(launch.configuration)
+        XCTAssertNil(launch.startLastWorkout())
+
+        for configuration in [emom, amrap] {
+            let timer = TimerViewModel(
+                configuration: configuration,
+                stateManager: stateManager,
+                onWorkoutStarted: launch.recordStartedWorkout
+            )
+            timer.startTapped()
+            XCTAssertEqual(timer.state, .countdown)
+            timer.resetTapped()
+        }
+
+        let reloaded = LastWorkoutStore(userDefaults: defaults, stateManager: stateManager)
+        let timer = try XCTUnwrap(reloaded.startLastWorkout())
+        defer { timer.resetTapped() }
+        XCTAssertEqual(timer.configuration, amrap)
+        XCTAssertEqual(timer.state, .countdown)
+    }
+
     func testRestoredWorkoutResumesFromSavedElapsedTime() {
         let configuration = TimerConfiguration(timerType: .forTime, numSets: 2)
         let savedWorkout = WorkoutState(

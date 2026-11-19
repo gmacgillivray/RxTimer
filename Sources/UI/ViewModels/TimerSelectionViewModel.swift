@@ -1,6 +1,51 @@
 import Foundation
 import SwiftUI
 
+final class LastWorkoutStore: ObservableObject {
+    static let storageKey = "LastStartedWorkoutConfiguration"
+
+    @Published private(set) var configuration: TimerConfiguration?
+    private let userDefaults: UserDefaults
+    private let stateManager: WorkoutStateManager
+
+    init(userDefaults: UserDefaults = .standard, stateManager: WorkoutStateManager = .shared) {
+        self.userDefaults = userDefaults
+        self.stateManager = stateManager
+        if let data = userDefaults.data(forKey: Self.storageKey),
+           let saved = try? JSONDecoder().decode(TimerConfiguration.self, from: data),
+           Self.isValid(saved) {
+            configuration = saved
+        }
+    }
+
+    func recordStartedWorkout(_ configuration: TimerConfiguration) {
+        guard Self.isValid(configuration), let data = try? JSONEncoder().encode(configuration) else { return }
+        userDefaults.set(data, forKey: Self.storageKey)
+        self.configuration = configuration
+    }
+
+    func startLastWorkout() -> TimerViewModel? {
+        guard let configuration else { return nil }
+        let timer = TimerViewModel(configuration: configuration, stateManager: stateManager)
+        timer.startTapped()
+        return timer
+    }
+
+    private static func isValid(_ configuration: TimerConfiguration) -> Bool {
+        guard configuration.numSets > 0, (configuration.restDurationSeconds ?? 0) >= 0 else { return false }
+        switch configuration.timerType {
+        case .forTime:
+            return (configuration.timeCapSeconds ?? 1) > 0
+        case .amrap:
+            return (configuration.durationSeconds ?? 0) > 0
+        case .emom:
+            guard let count = configuration.numIntervals, count > 0,
+                  let duration = configuration.intervalDurationSeconds, duration > 0 else { return false }
+            return !count.multipliedReportingOverflow(by: duration).overflow
+        }
+    }
+}
+
 /// ViewModel for timer selection screen
 /// Manages configuration loading and persistence
 final class TimerSelectionViewModel: ObservableObject {

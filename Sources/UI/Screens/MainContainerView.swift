@@ -3,6 +3,7 @@ import SwiftUI
 struct MainContainerView: View {
     // MARK: - State Management (Single source of truth)
     @State private var navState: AppNavigationState = .home
+    @StateObject private var lastWorkout = LastWorkoutStore()
 
     // Transient data carried between navigation states
     @State private var pendingWorkoutSummary: WorkoutSummaryData?
@@ -24,7 +25,8 @@ struct MainContainerView: View {
             },
             onStartWorkout: { config in
                 navState = .activeWorkout(config, restoredState: nil)
-            }
+            },
+            onQuickStart: lastWorkout.configuration == nil ? nil : startLastWorkout
         )
         // Active workout full-screen cover
         .fullScreenCover(isPresented: Binding(
@@ -34,15 +36,18 @@ struct MainContainerView: View {
             },
             set: { if !$0 { navState = .home } }
         )) {
-            if case .activeWorkout(let config, let restoredState) = navState {
+            if case .activeWorkout(let config, let restoredState, let startedTimer) = navState {
                 TimerView(
                     configuration: config,
                     restoredState: restoredState,
+                    startedTimer: startedTimer,
+                    onWorkoutStarted: lastWorkout.recordStartedWorkout,
                     onWorkoutStateChange: { _ in },
                     onFinish: { summary in
                         workoutSummary = summary
                     }
                 )
+                .id(startedTimer.map(ObjectIdentifier.init))
                 .fullScreenCover(item: $workoutSummary) { summary in
                     WorkoutSummaryView(
                         data: summary,
@@ -106,6 +111,11 @@ struct MainContainerView: View {
                 Text("You have an unfinished \(state.configuration.timerType.displayName) workout. Would you like to resume where you left off?")
             }
         }
+    }
+
+    private func startLastWorkout() {
+        guard navState == .home, !showRestorePrompt, let timer = lastWorkout.startLastWorkout() else { return }
+        navState = .activeWorkout(timer.configuration, restoredState: nil, startedTimer: timer)
     }
 
     private func checkForStateRestoration() {
