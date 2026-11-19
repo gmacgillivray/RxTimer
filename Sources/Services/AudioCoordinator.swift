@@ -29,16 +29,18 @@ class AudioCoordinator {
         self.currentSet = 1
     }
     
-    func handleEvent(_ event: TimerEvent) {
-        playAudioForEvent(event)
-        
+    func handleEvent(_ event: TimerEvent, workoutCompleted: Bool = true) {
         switch event {
         case .start:
             backgroundAudio.start()
-        case .pause, .finish:
+        case .pause:
             backgroundAudio.stop()
-            if event == .finish {
-                backgroundAudio.clearNowPlaying()
+        case .finish:
+            let playsCompletionCue = timerType == .emom && settings.audioEnabled && workoutCompleted
+            backgroundAudio.stop(keepingSessionActive: playsCompletionCue)
+            backgroundAudio.clearNowPlaying()
+            if playsCompletionCue {
+                audio.play(.complete, onFinished: backgroundAudio.deactivateIfIdle)
             }
         case .resume:
             backgroundAudio.start()
@@ -64,6 +66,7 @@ class AudioCoordinator {
         default:
             break
         }
+        playAudioForEvent(event)
     }
     
     // Called by ViewModel on every tick to update Now Playing center
@@ -97,7 +100,15 @@ class AudioCoordinator {
             default: break
             }
         case .start:
-            audio.play(sound: "go")
+            if timerType == .emom {
+                audio.play(.go)
+            } else {
+                audio.play(sound: "go")
+            }
+        case .intervalTick, .setStart:
+            if timerType == .emom { audio.play(.go) }
+        case .restStart where timerType == .emom:
+            audio.play(.rest)
         default:
             break
         }

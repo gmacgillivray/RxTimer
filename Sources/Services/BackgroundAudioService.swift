@@ -34,9 +34,14 @@ final class BackgroundAudioService {
         }
     }
 
-    func stop() {
+    func stop(keepingSessionActive: Bool = false) {
         audioPlayer?.stop()
-        try? audioSession.setActive(false)
+        if !keepingSessionActive { deactivateIfIdle() }
+    }
+
+    func deactivateIfIdle() {
+        guard audioPlayer?.isPlaying != true else { return }
+        try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     func updateNowPlaying(timerType: String, elapsed: String, set: String?) {
