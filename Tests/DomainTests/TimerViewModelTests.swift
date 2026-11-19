@@ -30,6 +30,56 @@ final class TimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.roundCount, 0)
     }
 
+    func testFinishForTimePublishesAndSavesOneCompletedResult() throws {
+        let workout = FinishHarness(configuration: TimerConfiguration(timerType: .forTime))
+        workout.startAfterCountdown()
+        workout.advance(by: 8)
+        workout.timer.completeRound()
+        workout.timer.pauseTapped()
+        workout.advance(by: 100)
+        workout.timer.resumeTapped()
+        workout.advance(by: 4)
+        workout.timer.completeSetTapped()
+        workout.timer.finishTapped()
+
+        try workout.checkResult(completed: true, duration: 12, firstSplit: 8)
+    }
+
+    func testFinishTimedAMRAPCountsBothSetsAndRestOnce() throws {
+        let workout = FinishHarness(configuration: TimerConfiguration(
+            timerType: .amrap, durationSeconds: 20, numSets: 2, restDurationSeconds: 10
+        ))
+        workout.startAfterCountdown()
+        workout.advance(by: 5)
+        workout.timer.completeRound()
+        workout.advance(by: 15)
+        XCTAssertEqual(workout.timer.state, .resting)
+        workout.advance(by: 10)
+        XCTAssertEqual(workout.timer.currentSet, 2)
+        workout.advance(by: 8)
+        workout.timer.pauseTapped()
+        workout.advance(by: 100)
+        workout.timer.resumeTapped()
+        workout.advance(by: 12)
+        workout.timer.finishTapped()
+
+        try workout.checkResult(completed: true, duration: 50, firstSplit: 5)
+    }
+
+    func testStopEarlyPublishesAndSavesOneIncompleteResult() throws {
+        let workout = FinishHarness(configuration: TimerConfiguration(timerType: .forTime))
+        workout.startAfterCountdown()
+        workout.advance(by: 7)
+        workout.timer.completeRound()
+        workout.advance(by: 2)
+        workout.timer.pauseTapped()
+        workout.advance(by: 100)
+        workout.timer.finishTapped()
+        workout.timer.finishTapped()
+
+        try workout.checkResult(completed: false, duration: 9, firstSplit: 7)
+    }
+
     func testStartTransitionsToCountdown() {
         viewModel.startTapped()
         // Engine now starts with countdown first
@@ -207,5 +257,67 @@ final class TimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .idle)
         XCTAssertEqual(viewModel.timeText, "00:00")
         XCTAssertEqual(viewModel.roundCount, 0)
+    }
+}
+
+private final class FinishHarness {
+    private final class Clock {
+        var time = Date(timeIntervalSinceReferenceDate: 0)
+    }
+
+    private let clock = Clock()
+    private let suiteName = "RxTimer.FinishHarness.\(UUID())"
+    private let defaults: UserDefaults
+    private let engine: TimerEngine
+    private let persistence = PersistenceController(inMemory: true)
+    private var results: [WorkoutSummaryData] = []
+    private var observation: AnyCancellable?
+    let timer: TimerViewModel
+
+    init(configuration: TimerConfiguration) {
+        defaults = UserDefaults(suiteName: suiteName)!
+        engine = TimerEngine(configuration: configuration, restoredState: nil, now: { [clock] in clock.time })
+        timer = TimerViewModel(
+            configuration: configuration,
+            stateManager: WorkoutStateManager(userDefaults: defaults),
+            persistence: persistence,
+            engine: engine
+        )
+        observation = timer.$result.compactMap { $0 }.sink { [weak self] in self?.results.append($0) }
+    }
+
+    deinit {
+        timer.resetTapped()
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func startAfterCountdown() {
+        timer.startTapped()
+        XCTAssertEqual(timer.state, .countdown)
+        advance(by: 10)
+        XCTAssertEqual(timer.state, .running)
+    }
+
+    func advance(by seconds: TimeInterval) {
+        clock.time.addTimeInterval(seconds)
+        engine.tick()
+    }
+
+    func checkResult(completed: Bool, duration: TimeInterval, firstSplit: TimeInterval) throws {
+        XCTAssertEqual(timer.state, .finished)
+        let summary = try XCTUnwrap(results.first)
+        XCTAssertEqual(summary.duration, duration)
+        XCTAssertEqual(summary.wasCompleted, completed)
+        XCTAssertEqual(summary.roundSplits.first?.first?.splitTime, firstSplit)
+        XCTAssertEqual(results.count, 1)
+
+        persistence.container.viewContext.reset()
+        let history = persistence.fetchAllWorkouts()
+        XCTAssertEqual(history.count, 1)
+        let saved = try XCTUnwrap(history.first)
+        XCTAssertEqual(saved.id, summary.id)
+        XCTAssertEqual(saved.totalDurationSeconds, summary.duration)
+        XCTAssertEqual(saved.wasCompleted, summary.wasCompleted)
+        XCTAssertEqual(saved.roundSplitSets.first?.first?.splitTime, firstSplit)
     }
 }

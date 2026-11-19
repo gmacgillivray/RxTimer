@@ -27,12 +27,17 @@ public struct SetDuration: Codable, Equatable {
 }
 
 public final class TimerEngine {
+    enum Completion {
+        case completed
+        case endedEarly
+    }
     // MARK: - Properties
     private var startWallTime: Date?
     private var pauseWallTime: Date?
     private var accumulated: TimeInterval = 0
     private var displayLink: CADisplayLink?
     private var configuration: TimerConfiguration
+    private let now: () -> Date
     private var currentInterval: Int = 1
 
     // Multi-set support
@@ -54,6 +59,7 @@ public final class TimerEngine {
     private var restEmittedSeconds: Set<Int> = []
 
     public private(set) var state: TimerState = .idle
+    private(set) var completion: Completion?
     public weak var delegate: TimerEngineDelegate?
 
     // MARK: - Public Accessors
@@ -61,12 +67,13 @@ public final class TimerEngine {
     public var setDurations: [SetDuration] { completedSetDurations }
 
     // MARK: - Initialization
-    public init(configuration: TimerConfiguration) {
-        self.configuration = configuration
+    public convenience init(configuration: TimerConfiguration) {
+        self.init(configuration: configuration, restoredState: nil)
     }
 
-    convenience init(configuration: TimerConfiguration, restoredState: WorkoutState?) {
-        self.init(configuration: configuration)
+    init(configuration: TimerConfiguration, restoredState: WorkoutState?, now: @escaping () -> Date = Date.init) {
+        self.configuration = configuration
+        self.now = now
         guard let restoredState else { return }
 
         state = .paused
@@ -98,7 +105,7 @@ public final class TimerEngine {
 
         if isRestPaused {
             isRestPaused = false
-            restStartTime = Date()
+            restStartTime = now()
             changeState(.resting)
             startDisplayLink()
             return
@@ -116,7 +123,7 @@ public final class TimerEngine {
             countdownRemaining = countdownDuration
 
             // Start countdown instead of running
-            startWallTime = Date()
+            startWallTime = now()
             changeState(.countdown)
             startDisplayLink()
             delegate?.timerDidEmit(event: .countdownStart)
@@ -128,7 +135,7 @@ public final class TimerEngine {
             // Record the rest time for the previous set
             let actualRestTime = restAccumulated
             if let restStart = restStartTime {
-                let finalRestTime = actualRestTime + Date().timeIntervalSince(restStart)
+                let finalRestTime = actualRestTime + now().timeIntervalSince(restStart)
                 recordRestTime(finalRestTime)
             }
 
@@ -138,7 +145,7 @@ public final class TimerEngine {
             restAccumulated = 0
         }
 
-        startWallTime = Date()
+        startWallTime = now()
         changeState(.running)
         startDisplayLink()
 
@@ -153,16 +160,16 @@ public final class TimerEngine {
     public func pause() {
         if state == .running {
             if let startTime = startWallTime {
-                accumulated += Date().timeIntervalSince(startTime)
+                accumulated += now().timeIntervalSince(startTime)
             }
-            pauseWallTime = Date()
+            pauseWallTime = now()
             changeState(.paused)
             stopDisplayLink()
             delegate?.timerDidEmit(event: .pause)
         } else if state == .countdown {
             // Pause logic for countdown
             if let startTime = startWallTime {
-                let elapsed = Date().timeIntervalSince(startTime)
+                let elapsed = now().timeIntervalSince(startTime)
                 countdownRemaining = max(0, countdownDuration - elapsed)
             }
             changeState(.countdownPaused)
@@ -178,7 +185,7 @@ public final class TimerEngine {
             // Resume logic for countdown
             // Shift start time so that 'now - start' equals the elapsed time we had before pause
             let elapsedAlready = countdownDuration - countdownRemaining
-            startWallTime = Date().addingTimeInterval(-elapsedAlready)
+            startWallTime = now().addingTimeInterval(-elapsedAlready)
             
             changeState(.countdown)
             startDisplayLink()
@@ -187,6 +194,7 @@ public final class TimerEngine {
 
     public func reset() {
         stopDisplayLink()
+        completion = nil
         changeState(.idle)
         startWallTime = nil
         pauseWallTime = nil
@@ -207,6 +215,7 @@ public final class TimerEngine {
     }
 
     public func finish() {
+        guard state != .finished, state != .idle else { return }
         if let restElapsed = restElapsedForRecovery {
             recordRestTime(restElapsed)
             isRestPaused = false
@@ -214,47 +223,43 @@ public final class TimerEngine {
 
         // Accumulate any remaining time if we're currently running
         if state == .running, let startTime = startWallTime {
-            accumulated += Date().timeIntervalSince(startTime)
+            accumulated += now().timeIntervalSince(startTime)
         }
 
+        endWorkout(.endedEarly)
+    }
+
+    public func completeSet() {
+        guard state == .running else { return }
+        completeSet(workingTime: getCurrentElapsed(), isManual: true)
+    }
+
+    private func completeSet(workingTime: TimeInterval, isManual: Bool) {
+        currentSetWorkingTime = workingTime
+        accumulated = 0
+        if isManual {
+            delegate?.timerDidEmit(event: .setComplete)
+        }
+
+        if shouldStartNextSet() {
+            startRest()
+        } else {
+            recordCompletedSet(workingTime: workingTime, restTime: 0)
+            endWorkout(.completed)
+        }
+    }
+
+    private func endWorkout(_ outcome: Completion) {
+        completion = outcome
         stopDisplayLink()
         changeState(.finished)
         delegate?.timerDidEmit(event: .finish)
     }
 
-    public func completeSet() {
-        // Can only complete a set when running
-        guard state == .running else { return }
-
-        // Accumulate any remaining time
-        if let startTime = startWallTime {
-            accumulated += Date().timeIntervalSince(startTime)
-        }
-
-        // Record the working time for this set
-        currentSetWorkingTime = accumulated
-        accumulated = 0 // Reset accumulated time since it's now recorded in the set
-        
-        stopDisplayLink()
-
-        // Emit set completion event
-        delegate?.timerDidEmit(event: .setComplete)
-
-        // Check if more sets remaining
-        if shouldStartNextSet() {
-            startRest() // Start rest period
-        } else {
-            // Final set - record with 0 rest time
-            recordCompletedSet(workingTime: currentSetWorkingTime, restTime: 0)
-            changeState(.finished)
-            delegate?.timerDidEmit(event: .finish)
-        }
-    }
-
     public func skipCountdown() {
         guard state == .countdown || state == .countdownPaused else { return }
         stopDisplayLink()
-        startWallTime = Date()
+        startWallTime = now()
         accumulated = 0
         changeState(.running)
         delegate?.timerDidEmit(event: .start)
@@ -268,17 +273,20 @@ public final class TimerEngine {
     }
 
     public func getCurrentElapsed() -> TimeInterval {
+        if completion == .completed {
+            return completedSetDurations.last?.workingTime ?? 0
+        }
         guard state == .running, let startTime = startWallTime else {
             return accumulated
         }
-        return accumulated + Date().timeIntervalSince(startTime)
+        return accumulated + now().timeIntervalSince(startTime)
     }
 
     public func getRestElapsed() -> TimeInterval {
         guard state == .resting, let restStart = restStartTime else {
             return restAccumulated
         }
-        return restAccumulated + Date().timeIntervalSince(restStart)
+        return restAccumulated + now().timeIntervalSince(restStart)
     }
 
     /// Returns the total duration of the workout including all working time and rest periods
@@ -286,8 +294,8 @@ public final class TimerEngine {
         // Sum all completed set durations
         let completedTotal = completedSetDurations.reduce(0.0) { $0 + $1.totalTime }
 
-        // Add current working time if we're running
-        let currentWorking = getCurrentElapsed()
+        // A completed final set is already included in completedTotal.
+        let currentWorking = completion == .completed ? 0 : getCurrentElapsed()
 
         // Add current rest time if we're resting
         let currentRest = restElapsedForRecovery ?? 0
@@ -304,7 +312,7 @@ public final class TimerEngine {
             currentInterval = 1
             currentSet += 1
             restAccumulated = 0
-            startWallTime = Date()
+            startWallTime = now()
             changeState(.running)
             delegate?.timerDidEmit(event: .setStart)
             startDisplayLink()
@@ -316,7 +324,7 @@ public final class TimerEngine {
 
         stopDisplayLink()
         accumulated = 0
-        restStartTime = Date()
+        restStartTime = now()
         restAccumulated = 0
 
         // Reset rest countdown tracking for this rest period
@@ -372,7 +380,7 @@ public final class TimerEngine {
         displayLink = nil
     }
 
-    @objc private func tick() {
+    @objc func tick() {
         if state == .countdown {
             handleCountdownTick()
         } else if state == .resting {
@@ -385,7 +393,7 @@ public final class TimerEngine {
     private func handleCountdownTick() {
         guard let startTime = startWallTime else { return }
 
-        let elapsed = Date().timeIntervalSince(startTime)
+        let elapsed = now().timeIntervalSince(startTime)
         let remaining = max(0, countdownDuration - elapsed)
 
         // Emit beep events only at 3, 2, and 1
@@ -403,7 +411,7 @@ public final class TimerEngine {
 
         // When countdown finishes, transition to running
         if remaining <= 0 {
-            startWallTime = Date()  // Reset start time for actual workout
+            startWallTime = now()  // Reset start time for actual workout
             accumulated = 0
             changeState(.running)
             delegate?.timerDidEmit(event: .start)
@@ -413,21 +421,12 @@ public final class TimerEngine {
     private func handleRunningTick() {
         guard let startTime = startWallTime else { return }
 
-        let elapsed = accumulated + Date().timeIntervalSince(startTime)
+        let elapsed = accumulated + now().timeIntervalSince(startTime)
         let remaining = calculateRemaining(elapsed: elapsed)
 
         // Check for set completion
-        if shouldFinish(elapsed: elapsed, remaining: remaining) {
-            // Record working time for auto-completed set
-            currentSetWorkingTime = elapsed
-
-            if shouldStartNextSet() {
-                startRest()
-            } else {
-                // Final set - record with 0 rest time
-                recordCompletedSet(workingTime: currentSetWorkingTime, restTime: 0)
-                finish()
-            }
+        if let limit = configuration.totalDurationSeconds, elapsed >= Double(limit) {
+            completeSet(workingTime: Double(limit), isManual: false)
             return
         }
 
@@ -448,7 +447,7 @@ public final class TimerEngine {
         guard let restStart = restStartTime,
               let restDuration = configuration.restDurationSeconds else { return }
 
-        let restElapsed = restAccumulated + Date().timeIntervalSince(restStart)
+        let restElapsed = restAccumulated + now().timeIntervalSince(restStart)
         let restRemaining = Double(restDuration) - restElapsed
 
         // Emit countdown sounds at 3, 2, 1 seconds before rest ends
@@ -472,13 +471,6 @@ public final class TimerEngine {
     private func calculateRemaining(elapsed: TimeInterval) -> TimeInterval? {
         guard let total = configuration.totalDurationSeconds else { return nil }
         return Double(total) - elapsed
-    }
-
-    private func shouldFinish(elapsed: TimeInterval, remaining: TimeInterval?) -> Bool {
-        if let remaining = remaining, remaining <= 0 {
-            return true
-        }
-        return false
     }
 
     private func checkIntervalTransition(elapsed: TimeInterval) {

@@ -98,23 +98,17 @@ struct TimerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(viewModel.state != .idle)
         .preferredColorScheme(.dark)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    viewModel.finishTapped()
-                    // Create summary data and call finish callback
-                    let summaryData = createSummaryData(wasCompleted: false)
-                    onFinish?(summaryData)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "xmark.circle.fill")
-                        Text("Done")
-                    }
-                    .foregroundColor(.secondary)
+        .overlay(alignment: .topLeading) {
+            if viewModel.state != .idle && viewModel.state != .finished {
+                Button(action: viewModel.finishTapped) {
+                    Label("End early", systemImage: "xmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
                 }
-                .disabled(viewModel.state == .idle)
-                .opacity(viewModel.state == .idle ? 0 : 1)
-                .accessibilityHidden(viewModel.state == .idle)
+                .buttonStyle(.bordered)
+                .padding(.leading, 12)
+                .accessibilityIdentifier("endWorkoutEarly")
             }
         }
         .onChange(of: viewModel.state) { newState in
@@ -124,11 +118,10 @@ struct TimerView: View {
             // Prevent screen from sleeping during active workouts
             // Enable idle timer only when idle or finished to allow normal sleep behavior
             UIApplication.shared.isIdleTimerDisabled = (newState != .idle && newState != .finished)
-
-            // When workout finishes, create summary data and call callback
-            if newState == .finished {
-                let summaryData = createSummaryData(wasCompleted: true)
-                onFinish?(summaryData)
+        }
+        .onChange(of: viewModel.result) { result in
+            if let result {
+                onFinish?(result)
             }
         }
         .onAppear {
@@ -140,20 +133,6 @@ struct TimerView: View {
         }
     }
 
-    // Create summary data from current workout state
-    private func createSummaryData(wasCompleted: Bool) -> WorkoutSummaryData {
-        return WorkoutSummaryData(
-            configuration: viewModel.configuration,
-            duration: viewModel.getTotalDuration(),
-            repCount: viewModel.repCount,
-            roundCount: viewModel.roundCount,
-            wasCompleted: wasCompleted,
-            roundSplits: convertRoundSplitsForDisplay(),
-            setDurations: viewModel.getSetDurations()
-        )
-    }
-
-    // MARK: - Undo Toast
     private func showRoundUndoToast(roundNumber: Int) {
         undoToastWorkItem?.cancel()
         undoToastRoundNumber = roundNumber
@@ -851,17 +830,6 @@ struct TimerView: View {
     }
 
 
-    private func convertRoundSplitsForDisplay() -> [[RoundSplitDisplay]] {
-        return viewModel.allRounds.map { setRounds in
-            setRounds.map { roundData in
-                RoundSplitDisplay(
-                    roundNumber: roundData.roundNumber,
-                    splitTime: roundData.splitTime
-                )
-            }
-        }
-    }
-
     private var stateIndicatorColor: Color {
         switch viewModel.state {
         case .idle:
@@ -914,8 +882,6 @@ struct TimerView: View {
                     accentColor: finishSliderColor
                 ) {
                     viewModel.completeSetTapped()
-                    let summaryData = createSummaryData(wasCompleted: false)
-                    onFinish?(summaryData)
                 }
             }
         }

@@ -2,14 +2,15 @@ import CoreData
 
 struct PersistenceController {
     static let shared = PersistenceController()
+    private static let model = NSManagedObjectModel.mergedModel(from: [Bundle.main])!
 
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "WorkoutTimer")
+        container = NSPersistentContainer(name: "WorkoutTimer", managedObjectModel: Self.model)
 
         if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+            container.persistentStoreDescriptions.first!.type = NSInMemoryStoreType
         }
 
         container.loadPersistentStores { description, error in
