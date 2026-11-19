@@ -82,7 +82,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         self.audioCoordinator = audioCoordinator
         self.hapticCoordinator = hapticCoordinator
         self.stateManager = stateManager
-        self.roundTracker = RoundTracker(numSets: configuration.numSets)
+        self.roundTracker = RoundTracker(numSets: configuration.numSets, restoredState: restoredState)
 
         // Configure Coordinators
         self.audioCoordinator.configure(timerType: configuration.timerType, numSets: configuration.numSets)
@@ -93,6 +93,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             self.currentSet = restored.currentSet
             self.repCount = restored.repCount
             self.roundCount = restored.roundCount
+            self.lastRoundSplitTime = roundTracker.lastRoundSplitTime
             self.currentInterval = restored.currentInterval ?? 1
             self.state = .paused // Always restore as paused per spec
 
@@ -233,6 +234,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         roundCount = roundTracker.roundCount
         lastRoundSplitTime = roundTracker.lastRoundSplitTime
         hapticCoordinator.handleEvent(.counterIncrement)
+        saveState()
     }
 
     func skipCountdown() {
@@ -272,6 +274,12 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         workoutState.currentInterval = currentInterval
         workoutState.repCount = repCount
         workoutState.roundCount = roundCount
+        workoutState.progress = WorkoutProgress(
+            completedRoundSplits: roundTracker.allRoundSplits,
+            currentSetRounds: roundTracker.currentSetRounds,
+            setDurations: engine.setDurations,
+            restElapsed: engine.restElapsedForRecovery
+        )
 
         // Save to UserDefaults
         stateManager.saveState(workoutState)
@@ -391,27 +399,23 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         if event == .setComplete {
             roundTracker.saveCurrentSetRounds(currentSet: currentSet)
         }
+    }
 
-        // Handle rest start
-        if event == .restStart {
+    func timerDidChangeState(_ newState: TimerState) {
+        let previousState = state
+        let wasResting = previousState == .resting || workoutState.progress?.restElapsed != nil
+        let movedToNextSet = currentSet != engine.currentSetNumber
+        if previousState == .running && (newState == .resting || movedToNextSet) {
+            roundTracker.saveCurrentSetRounds(currentSet: currentSet)
             roundTracker.resetForNewSet()
             roundCount = 0
             lastRoundSplitTime = nil
-
             if timerConfiguration.timerType == .forTime {
                 repCount = 0
             }
             currentInterval = 1
         }
 
-        // Handle new set start (after rest)
-        if event == .setStart {
-            // Rounds and counters already reset during rest_start
-            // This event is for audio/haptic feedback
-        }
-    }
-
-    func timerDidChangeState(_ newState: TimerState) {
         self.state = newState
         workoutState.state = newState
 
@@ -424,7 +428,9 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         }
 
         if newState == .finished {
-            completeFinalRound()
+            if !wasResting {
+                completeFinalRound()
+            }
             workoutState.elapsedSeconds = engine.getCurrentElapsed()
             saveWorkoutWithRounds(wasCompleted: true)
             clearSavedState()
