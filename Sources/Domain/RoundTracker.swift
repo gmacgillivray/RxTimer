@@ -9,8 +9,13 @@ final class RoundTracker {
     private(set) var roundCount: Int = 0
 
     // MARK: - Initialization
-    init(numSets: Int) {
-        self.allRoundSplits = Array(repeating: [], count: numSets)
+    init(numSets: Int, restoredState: WorkoutState? = nil) {
+        self.allRoundSplits = restoredState?.progress?.completedRoundSplits
+            ?? Array(repeating: [], count: numSets)
+        self.currentSetRounds = restoredState?.progress?.currentSetRounds ?? []
+        self.roundCount = restoredState?.roundCount ?? 0
+        self.lastRoundCompletionTime = currentSetRounds.last?.cumulativeTime ?? 0
+        self.lastRoundSplitTime = currentSetRounds.last?.splitTime
     }
 
     // MARK: - Round Operations
@@ -19,7 +24,7 @@ final class RoundTracker {
     @discardableResult
     func completeRound(currentElapsed: TimeInterval) -> RoundSplitData {
         let splitTime = currentElapsed - lastRoundCompletionTime
-        let roundNumber = currentSetRounds.count + 1
+        let roundNumber = roundCount + 1
 
         let roundSplit = RoundSplitData(
             roundNumber: roundNumber,
@@ -29,7 +34,7 @@ final class RoundTracker {
         )
 
         currentSetRounds.append(roundSplit)
-        roundCount = currentSetRounds.count
+        roundCount = roundNumber
         lastRoundSplitTime = splitTime
         lastRoundCompletionTime = currentElapsed
 
@@ -41,7 +46,7 @@ final class RoundTracker {
         let splitTime = currentElapsed - lastRoundCompletionTime
 
         if splitTime > 0.1 {
-            let roundNumber = currentSetRounds.count + 1
+            let roundNumber = roundCount + 1
             let roundSplit = RoundSplitData(
                 roundNumber: roundNumber,
                 splitTime: splitTime,
@@ -69,7 +74,7 @@ final class RoundTracker {
     func undoLastRound() -> Bool {
         guard !currentSetRounds.isEmpty else { return false }
         currentSetRounds.removeLast()
-        roundCount = currentSetRounds.count
+        roundCount -= 1
 
         if let lastRound = currentSetRounds.last {
             lastRoundCompletionTime = lastRound.cumulativeTime

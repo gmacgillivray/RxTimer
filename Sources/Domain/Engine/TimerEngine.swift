@@ -10,7 +10,7 @@ public protocol TimerEngineDelegate: AnyObject {
 
 // MARK: - Set Duration Tracking
 /// Tracks actual duration of a completed set including working time and rest time
-public struct SetDuration: Equatable {
+public struct SetDuration: Codable, Equatable {
     public let setNumber: Int
     public let workingTime: TimeInterval
     public let restTime: TimeInterval
@@ -39,6 +39,7 @@ public final class TimerEngine {
     private var currentSet: Int = 1
     private var restStartTime: Date?
     private var restAccumulated: TimeInterval = 0
+    private var isRestPaused = false
     private var completedSetDurations: [SetDuration] = []
     private var currentSetWorkingTime: TimeInterval = 0
 
@@ -72,6 +73,17 @@ public final class TimerEngine {
         accumulated = restoredState.elapsedSeconds
         currentSet = restoredState.currentSet
         currentInterval = restoredState.currentInterval ?? 1
+        completedSetDurations = restoredState.progress?.setDurations ?? []
+        if let restElapsed = restoredState.progress?.restElapsed {
+            restAccumulated = restElapsed
+            isRestPaused = true
+            accumulated = 0
+        }
+    }
+
+    var restElapsedForRecovery: TimeInterval? {
+        guard state == .resting || isRestPaused else { return nil }
+        return getRestElapsed()
     }
 
     // MARK: - Cleanup
@@ -83,6 +95,14 @@ public final class TimerEngine {
     // MARK: - Public Methods
     public func start() {
         guard state == .idle || state == .paused || state == .resting else { return }
+
+        if isRestPaused {
+            isRestPaused = false
+            restStartTime = Date()
+            changeState(.resting)
+            startDisplayLink()
+            return
+        }
 
         let wasResting = state == .resting
 
@@ -173,6 +193,7 @@ public final class TimerEngine {
         restStartTime = nil
         accumulated = 0
         restAccumulated = 0
+        isRestPaused = false
         currentInterval = 1
         currentSet = 1
         completedSetDurations = []
@@ -186,6 +207,11 @@ public final class TimerEngine {
     }
 
     public func finish() {
+        if let restElapsed = restElapsedForRecovery {
+            recordRestTime(restElapsed)
+            isRestPaused = false
+        }
+
         // Accumulate any remaining time if we're currently running
         if state == .running, let startTime = startWallTime {
             accumulated += Date().timeIntervalSince(startTime)
@@ -264,7 +290,7 @@ public final class TimerEngine {
         let currentWorking = getCurrentElapsed()
 
         // Add current rest time if we're resting
-        let currentRest = state == .resting ? getRestElapsed() : 0
+        let currentRest = restElapsedForRecovery ?? 0
 
         return completedTotal + currentWorking + currentRest
     }
@@ -289,6 +315,7 @@ public final class TimerEngine {
         recordCompletedSet(workingTime: currentSetWorkingTime, restTime: 0)
 
         stopDisplayLink()
+        accumulated = 0
         restStartTime = Date()
         restAccumulated = 0
 

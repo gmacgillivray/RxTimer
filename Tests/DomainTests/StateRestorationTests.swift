@@ -19,6 +19,117 @@ final class StateRestorationTests: XCTestCase {
 
     // MARK: - Basic Save/Load Tests
 
+    func testRecoveredWorkoutPreservesSplitsAndSetDurationsThroughFinish() throws {
+        let configuration = TimerConfiguration(
+            timerType: .forTime,
+            numSets: 2,
+            restDurationSeconds: 30
+        )
+        let completedSetSplits: [RoundSplitData]
+        let completedSetDuration: SetDuration
+        let splitBeforeRestart: TimeInterval
+
+        do {
+            let original = TimerViewModel(configuration: configuration, stateManager: stateManager)
+            original.startTapped()
+            original.skipCountdown()
+            original.completeRound()
+            original.completeSetTapped()
+            XCTAssertEqual(original.state, .resting)
+            original.skipRest()
+
+            XCTAssertEqual(original.currentSet, 2)
+            completedSetSplits = original.allRounds[0]
+            XCTAssertEqual(completedSetSplits.map(\.roundNumber), [1])
+            completedSetDuration = try XCTUnwrap(original.getSetDurations().first)
+            XCTAssertGreaterThan(completedSetDuration.workingTime, 0)
+            XCTAssertGreaterThan(completedSetDuration.restTime, 0)
+
+            original.completeRound()
+            splitBeforeRestart = try XCTUnwrap(original.lastRoundSplitTime)
+            original.pauseTapped()
+        }
+
+        let reloadManager = WorkoutStateManager()
+        let savedWorkout = try XCTUnwrap(reloadManager.loadState())
+        XCTAssertEqual(savedWorkout.state, .paused)
+        XCTAssertEqual(savedWorkout.currentSet, 2)
+        XCTAssertEqual(savedWorkout.roundCount, 1)
+
+        let recovered = TimerViewModel(
+            configuration: savedWorkout.configuration,
+            restoredState: savedWorkout,
+            stateManager: reloadManager
+        )
+        recovered.resumeTapped()
+        XCTAssertEqual(recovered.state, .running)
+        recovered.completeRound()
+        let splitAfterRestart = try XCTUnwrap(recovered.lastRoundSplitTime)
+        recovered.completeSetTapped()
+        XCTAssertEqual(recovered.state, .finished)
+
+        XCTAssertEqual(recovered.allRounds[0].map(\.roundNumber), [1], "Set one should retain its logged round")
+        XCTAssertEqual(recovered.allRounds[0].map(\.splitTime), completedSetSplits.map(\.splitTime))
+        XCTAssertEqual(recovered.getSetDurations().first { $0.setNumber == 1 }, completedSetDuration)
+        XCTAssertEqual(recovered.allRounds[1].map(\.roundNumber), [1, 2])
+        XCTAssertEqual(recovered.allRounds[1].map(\.splitTime), [splitBeforeRestart, splitAfterRestart])
+    }
+
+    func testLoadsLegacySnapshotWithoutWorkoutProgress() throws {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let legacyJSON = """
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "configuration": { "timerType": "FT", "numSets": 2 },
+            "state": "paused",
+            "startTimestamp": "\(timestamp)",
+            "lastUpdateTimestamp": "\(timestamp)",
+            "elapsedSeconds": 65,
+            "accumulatedPausedSeconds": 0,
+            "currentSet": 2,
+            "repCount": 0,
+            "roundCount": 1
+        }
+        """
+        UserDefaults.standard.set(Data(legacyJSON.utf8), forKey: "com.workoutTimer.activeWorkoutState")
+
+        let loaded = try XCTUnwrap(stateManager.loadState())
+        XCTAssertEqual(loaded.configuration.timerType, .forTime)
+        XCTAssertEqual(loaded.state, .paused)
+        XCTAssertEqual(loaded.elapsedSeconds, 65)
+        XCTAssertEqual(loaded.currentSet, 2)
+        XCTAssertEqual(loaded.roundCount, 1)
+        XCTAssertNil(loaded.progress)
+    }
+
+    func testRecoveringDuringRestContinuesToNextSet() throws {
+        let configuration = TimerConfiguration(timerType: .forTime, numSets: 2, restDurationSeconds: 30)
+        let original = TimerViewModel(configuration: configuration, stateManager: stateManager)
+        original.startTapped()
+        original.skipCountdown()
+        original.completeRound()
+        original.completeSetTapped()
+        let snapshot = stateManager.loadState()
+        original.resetTapped()
+
+        let recovered = TimerViewModel(
+            configuration: configuration,
+            restoredState: try XCTUnwrap(snapshot),
+            stateManager: stateManager
+        )
+        defer { recovered.resetTapped() }
+        XCTAssertEqual(recovered.state, .paused)
+        recovered.resumeTapped()
+        XCTAssertEqual(recovered.state, .resting)
+        recovered.skipRest()
+
+        XCTAssertEqual(recovered.state, .running)
+        XCTAssertEqual(recovered.currentSet, 2)
+        XCTAssertEqual(recovered.roundCount, 0)
+        XCTAssertEqual(recovered.allRounds[0].map(\.roundNumber), [1])
+        XCTAssertEqual(recovered.getSetDurations().map(\.setNumber), [1])
+    }
+
     func testSaveAndLoadState() {
         let config = TimerConfiguration(timerType: .amrap, durationSeconds: 300)
         let originalState = WorkoutState(

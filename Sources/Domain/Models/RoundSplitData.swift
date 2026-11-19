@@ -1,6 +1,6 @@
 import Foundation
 
-public struct RoundSplitData: Equatable {
+public struct RoundSplitData: Codable, Equatable {
     public let roundNumber: Int
     public let splitTime: TimeInterval
     public let cumulativeTime: TimeInterval

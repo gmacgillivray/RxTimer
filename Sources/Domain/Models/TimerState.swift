@@ -10,6 +10,13 @@ public enum TimerState: String, Codable {
     case finished
 }
 
+struct WorkoutProgress: Codable {
+    let completedRoundSplits: [[RoundSplitData]]
+    let currentSetRounds: [RoundSplitData]
+    let setDurations: [SetDuration]
+    let restElapsed: TimeInterval?
+}
+
 public struct WorkoutState: Codable {
     let id: UUID
     let configuration: TimerConfiguration
@@ -22,6 +29,7 @@ public struct WorkoutState: Codable {
     var currentInterval: Int?
     var repCount: Int
     var roundCount: Int
+    var progress: WorkoutProgress? = nil
 
     public init(
         id: UUID = UUID(),
