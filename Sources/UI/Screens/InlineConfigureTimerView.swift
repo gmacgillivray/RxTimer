@@ -19,28 +19,17 @@ struct InlineConfigureTimerView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     init(
-        timerType: TimerType,
+        configuration: TimerConfiguration,
         onStart: @escaping (TimerConfiguration) -> Void,
         onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
         onCancel: @escaping () -> Void
     ) {
-        self.timerType = timerType
+        self.timerType = configuration.timerType
         self.onStart = onStart
         self.onWorkoutComplete = onWorkoutComplete
         self.onCancel = onCancel
 
-        // Initialize with appropriate defaults for each timer type
-        var config = TimerConfiguration(timerType: timerType)
-        switch timerType {
-        case .amrap:
-            config.durationSeconds = 600 // Default 10 minutes
-        case .emom:
-            config.numIntervals = 10
-            config.intervalDurationSeconds = 60
-        case .forTime:
-            break // No required defaults
-        }
-        _configuration = State(initialValue: config)
+        _configuration = State(initialValue: configuration)
     }
 
     var body: some View {
@@ -87,6 +76,7 @@ struct InlineConfigureTimerView: View {
             VStack {
                 Spacer()
                 StickyStartButton(action: startWorkout, color: iconColor)
+                    .disabled(!configuration.isUsable)
             }
         }
         .background(
@@ -95,28 +85,23 @@ struct InlineConfigureTimerView: View {
         )
         .navigationTitle("Configure Timer")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel", action: onCancel)
+            }
+        }
     }
 
     // MARK: - Actions
     
     private func startWorkout() {
-        saveConfiguration()
         onStart(configuration)
     }
     
     private func finishWorkout(_ summary: WorkoutSummaryData) {
         onWorkoutComplete(summary)
         presentationMode.wrappedValue.dismiss()
-    }
-
-    // MARK: - Configuration Persistence
-
-    private func saveConfiguration() {
-        let key = "LastUsedConfig.\(configuration.timerType.rawValue)"
-        if let data = try? JSONEncoder().encode(configuration) {
-            UserDefaults.standard.set(data, forKey: key)
-            UserDefaults.standard.synchronize()
-        }
     }
 
     // MARK: - View Components
@@ -236,7 +221,7 @@ struct InlineConfigureTimerView: View {
                     InlineTimePicker(
                         title: "Rest Between Sets",
                         selection: Binding(
-                            get: { configuration.restDurationSeconds ?? 120 },
+                            get: { configuration.restDurationSeconds ?? 0 },
                             set: { configuration.restDurationSeconds = $0 }
                         )
                     )
@@ -618,6 +603,7 @@ struct BigStepper: View {
                             .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Decrease \(title)")
                     .disabled(value <= range.lowerBound)
 
                     Text("\(value)")
@@ -634,6 +620,7 @@ struct BigStepper: View {
                             .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Increase \(title)")
                     .disabled(value >= range.upperBound)
                 }
             }
@@ -656,6 +643,7 @@ struct BigStepper: View {
                             .foregroundColor(value > range.lowerBound ? color : .gray.opacity(0.3))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Decrease \(title)")
                     .disabled(value <= range.lowerBound)
 
                     Text("\(value)")
@@ -672,6 +660,7 @@ struct BigStepper: View {
                             .foregroundColor(value < range.upperBound ? color : .gray.opacity(0.3))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Increase \(title)")
                     .disabled(value >= range.upperBound)
                 }
             }
