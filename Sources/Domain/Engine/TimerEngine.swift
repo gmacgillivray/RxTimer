@@ -320,9 +320,8 @@ public final class TimerEngine {
 
     /// Records a completed set with working and rest time
     private func recordCompletedSet(workingTime: TimeInterval, restTime: TimeInterval) {
-        let setNumber = completedSetDurations.count + 1
         let duration = SetDuration(
-            setNumber: setNumber,
+            setNumber: currentSet,
             workingTime: workingTime,
             restTime: restTime
         )

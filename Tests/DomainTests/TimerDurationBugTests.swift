@@ -5,6 +5,23 @@ final class TimerDurationBugTests: XCTestCase {
 
     // MARK: - Bug Reproduction Tests
 
+    func testCompletingRestoredSetRecordsItsOriginalSetNumber() {
+        let configuration = TimerConfiguration(timerType: .forTime, numSets: 2)
+        let savedWorkout = WorkoutState(
+            configuration: configuration,
+            state: .paused,
+            elapsedSeconds: 65,
+            currentSet: 2
+        )
+        let engine = TimerEngine(configuration: configuration, restoredState: savedWorkout)
+
+        engine.resume()
+        engine.completeSet()
+
+        XCTAssertEqual(engine.state, .finished)
+        XCTAssertEqual(engine.setDurations.map(\.setNumber), [2])
+    }
+
     func testZeroRestMultiSetAdvancesCorrectly() {
         let config = TimerConfiguration(
             timerType: .amrap,

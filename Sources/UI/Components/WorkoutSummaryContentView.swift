@@ -139,7 +139,7 @@ struct WorkoutSummaryContentView: View {
                                 }
 
                                 // Show set duration if available
-                                if let setDuration = getSetDuration(for: setIndex) {
+                                if let setDuration = getSetDuration(forSetNumber: setIndex + 1) {
                                     HStack(spacing: 12) {
                                         Text("Work: \(formatSplitTime(setDuration.workingTime))")
                                             .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -258,9 +258,7 @@ struct WorkoutSummaryContentView: View {
         }
     }
 
-    private func getSetDuration(for setIndex: Int) -> SetDuration? {
-        let setDurations = data.setDurationDetails
-        guard setIndex < setDurations.count else { return nil }
-        return setDurations[setIndex]
+    private func getSetDuration(forSetNumber setNumber: Int) -> SetDuration? {
+        data.setDurationDetails.first { $0.setNumber == setNumber }
     }
 }
