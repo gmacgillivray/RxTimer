@@ -17,14 +17,17 @@ struct TimerSelectionView: View {
     // Callbacks
     let onWorkoutComplete: (WorkoutSummaryData) -> Void
     let onStartWorkout: (TimerConfiguration) -> Void
+    let onQuickStart: (() -> Void)?
 
     init(
         onNavigateToHistory: @escaping () -> Void,
         onWorkoutComplete: @escaping (WorkoutSummaryData) -> Void,
-        onStartWorkout: @escaping (TimerConfiguration) -> Void
+        onStartWorkout: @escaping (TimerConfiguration) -> Void,
+        onQuickStart: (() -> Void)? = nil
     ) {
         self.onWorkoutComplete = onWorkoutComplete
         self.onStartWorkout = onStartWorkout
+        self.onQuickStart = onQuickStart
         _viewModel = StateObject(
             wrappedValue: TimerSelectionViewModel(
                 onSelectTimer: { _ in },
@@ -199,6 +202,16 @@ struct TimerSelectionView: View {
                     weight: .medium
                 ))
                 .foregroundColor(.white.opacity(0.6))
+
+            if let onQuickStart {
+                Button(action: onQuickStart) {
+                    Label("Start last workout", systemImage: "play.fill")
+                        .font(.headline)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("startLastWorkout")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -23,10 +23,16 @@ struct TimerView: View {
     init(
         configuration: TimerConfiguration,
         restoredState: WorkoutState? = nil,
+        startedTimer: TimerViewModel? = nil,
+        onWorkoutStarted: ((TimerConfiguration) -> Void)? = nil,
         onWorkoutStateChange: ((Bool) -> Void)? = nil,
         onFinish: ((WorkoutSummaryData) -> Void)? = nil
     ) {
-        _viewModel = StateObject(wrappedValue: TimerViewModel(configuration: configuration, restoredState: restoredState))
+        _viewModel = StateObject(wrappedValue: startedTimer ?? TimerViewModel(
+            configuration: configuration,
+            restoredState: restoredState,
+            onWorkoutStarted: onWorkoutStarted
+        ))
         self.onWorkoutStateChange = onWorkoutStateChange
         self.onFinish = onFinish
     }
@@ -124,6 +130,9 @@ struct TimerView: View {
                 let summaryData = createSummaryData(wasCompleted: true)
                 onFinish?(summaryData)
             }
+        }
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = viewModel.state != .idle && viewModel.state != .finished
         }
         .onDisappear {
             // Re-enable idle timer when view disappears to restore normal behavior

@@ -50,6 +50,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     private let audioCoordinator: AudioCoordinator
     private let hapticCoordinator: HapticCoordinator
     private let stateManager: WorkoutStateManager
+    private let onWorkoutStarted: ((TimerConfiguration) -> Void)?
     private var workoutState: WorkoutState
     private var cancellables = Set<AnyCancellable>()
 
@@ -75,13 +76,15 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         restoredState: WorkoutState? = nil,
         audioCoordinator: AudioCoordinator = AudioCoordinator(),
         hapticCoordinator: HapticCoordinator = HapticCoordinator(),
-        stateManager: WorkoutStateManager = .shared
+        stateManager: WorkoutStateManager = .shared,
+        onWorkoutStarted: ((TimerConfiguration) -> Void)? = nil
     ) {
         self.timerConfiguration = configuration
         self.engine = TimerEngine(configuration: configuration, restoredState: restoredState)
         self.audioCoordinator = audioCoordinator
         self.hapticCoordinator = hapticCoordinator
         self.stateManager = stateManager
+        self.onWorkoutStarted = onWorkoutStarted
         self.roundTracker = RoundTracker(numSets: configuration.numSets, restoredState: restoredState)
 
         // Configure Coordinators
@@ -152,11 +155,15 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     }
 
     func startTapped() {
-        if state == .idle {
+        let isNewWorkout = state == .idle
+        if isNewWorkout {
             workoutState.startTimestamp = Date()
             workoutState.state = .running
         }
         engine.start()
+        if isNewWorkout && state == .countdown {
+            onWorkoutStarted?(timerConfiguration)
+        }
         saveState()
     }
 

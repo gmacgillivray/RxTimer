@@ -4,11 +4,13 @@ import Combine
 final class WorkoutStateManager {
     static let shared = WorkoutStateManager()
 
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
     private let stateKey = "com.workoutTimer.activeWorkoutState"
     private let expiryDuration: TimeInterval = 3600 // 1 hour
 
-    init() {}
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
 
     // MARK: - Save State
     func saveState(_ state: WorkoutState) {
