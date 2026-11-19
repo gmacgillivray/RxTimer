@@ -1,10 +1,18 @@
 import AVFoundation
 import AudioToolbox
+import UIKit
 
-final class AudioService {
+final class AudioService: NSObject, AVAudioPlayerDelegate {
     static let shared = AudioService()
 
-    private var players: [String: AVAudioPlayer] = [:]
+    enum EMOMCue: String, CaseIterable {
+        case go = "EMOMGo"
+        case rest = "EMOMRest"
+        case complete = "EMOMComplete"
+    }
+
+    private var cuePlayers: [EMOMCue: AVAudioPlayer] = [:]
+    private var completionHandler: (() -> Void)?
 
     // System sound mapping for countdown (Option A: Classic Beep Progression)
     private let systemSoundMap: [String: SystemSoundID] = [
@@ -14,21 +22,44 @@ final class AudioService {
         "go": 1057      // Sharp "tock" click
     ]
 
-    private init() {
-        preloadSounds()
-    }
-
-    private func preloadSounds() {
-        // All sounds now use iOS system sounds - no audio files needed
+    private override init() {
+        super.init()
+        for cue in EMOMCue.allCases {
+            guard let data = NSDataAsset(name: cue.rawValue)?.data,
+                  let player = try? AVAudioPlayer(data: data) else { continue }
+            player.delegate = self
+            cuePlayers[cue] = player
+        }
     }
 
     func play(sound: String) {
-        // Check if this is a system sound first
         if let systemSoundID = systemSoundMap[sound] {
             AudioServicesPlaySystemSound(systemSoundID)
-        } else {
-            // Fall back to loaded audio files
-            players[sound]?.play()
         }
+    }
+
+    func play(_ cue: EMOMCue, onFinished: (() -> Void)? = nil) {
+        if cue == .complete {
+            completionHandler = onFinished
+        }
+        if let player = cuePlayers[cue] {
+            player.currentTime = 0
+            if player.play() { return }
+        }
+        if cue == .complete { finishCompletionCue() }
+    }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if player === cuePlayers[.complete] { finishCompletionCue() }
+    }
+
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        if player === cuePlayers[.complete] { finishCompletionCue() }
+    }
+
+    private func finishCompletionCue() {
+        let handler = completionHandler
+        completionHandler = nil
+        handler?()
     }
 }

@@ -108,6 +108,7 @@ public final class TimerEngine {
             restStartTime = now()
             changeState(.resting)
             startDisplayLink()
+            delegate?.timerDidEmit(event: .resume)
             return
         }
 
@@ -143,6 +144,7 @@ public final class TimerEngine {
             currentInterval = 1
             currentSet += 1
             restAccumulated = 0
+            emomEmittedSeconds.removeAll()
         }
 
         startWallTime = now()
@@ -150,11 +152,7 @@ public final class TimerEngine {
         startDisplayLink()
 
         // Emit appropriate start event
-        if wasResting {
-            delegate?.timerDidEmit(event: .setStart)
-        } else if state == .running {
-            delegate?.timerDidEmit(event: .start)
-        }
+        delegate?.timerDidEmit(event: wasResting ? .setStart : .resume)
     }
 
     public func pause() {
@@ -180,7 +178,6 @@ public final class TimerEngine {
     public func resume() {
         if state == .paused {
             start()
-            delegate?.timerDidEmit(event: .resume)
         } else if state == .countdownPaused {
             // Resume logic for countdown
             // Shift start time so that 'now - start' equals the elapsed time we had before pause
@@ -312,6 +309,7 @@ public final class TimerEngine {
             currentInterval = 1
             currentSet += 1
             restAccumulated = 0
+            emomEmittedSeconds.removeAll()
             startWallTime = now()
             changeState(.running)
             delegate?.timerDidEmit(event: .setStart)

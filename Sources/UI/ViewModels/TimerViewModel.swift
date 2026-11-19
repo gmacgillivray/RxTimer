@@ -417,7 +417,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     func timerDidEmit(event: TimerEvent) {
         // Delegate side effects to coordinators
         hapticCoordinator.handleEvent(event)
-        audioCoordinator.handleEvent(event)
+        audioCoordinator.handleEvent(event, workoutCompleted: engine.completion == .completed)
 
         // VoiceOver announcements for key events
         announceEventForVoiceOver(event)
