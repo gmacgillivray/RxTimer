@@ -16,6 +16,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     @Published var showCounterButton: Bool = true // Always show round counter
     @Published var countdownText: String = "10"
     @Published var emomElapsedTimeText: String = "00:00"
+    @Published private(set) var result: WorkoutSummaryData?
 
     // MARK: - Exposed Configuration (read-only)
     var timerType: TimerType { timerConfiguration.timerType }
@@ -50,6 +51,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     private let audioCoordinator: AudioCoordinator
     private let hapticCoordinator: HapticCoordinator
     private let stateManager: WorkoutStateManager
+    private let persistence: PersistenceController
     private let onWorkoutStarted: ((TimerConfiguration) -> Void)?
     private var workoutState: WorkoutState
     private var cancellables = Set<AnyCancellable>()
@@ -77,13 +79,16 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         audioCoordinator: AudioCoordinator = AudioCoordinator(),
         hapticCoordinator: HapticCoordinator = HapticCoordinator(),
         stateManager: WorkoutStateManager = .shared,
+        persistence: PersistenceController = .shared,
+        engine: TimerEngine? = nil,
         onWorkoutStarted: ((TimerConfiguration) -> Void)? = nil
     ) {
         self.timerConfiguration = configuration
-        self.engine = TimerEngine(configuration: configuration, restoredState: restoredState)
+        self.engine = engine ?? TimerEngine(configuration: configuration, restoredState: restoredState)
         self.audioCoordinator = audioCoordinator
         self.hapticCoordinator = hapticCoordinator
         self.stateManager = stateManager
+        self.persistence = persistence
         self.onWorkoutStarted = onWorkoutStarted
         self.roundTracker = RoundTracker(numSets: configuration.numSets, restoredState: restoredState)
 
@@ -157,8 +162,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     func startTapped() {
         let isNewWorkout = state == .idle
         if isNewWorkout {
-            workoutState.startTimestamp = Date()
-            workoutState.state = .running
+            workoutState = WorkoutState(configuration: timerConfiguration)
         }
         engine.start()
         if isNewWorkout && state == .countdown {
@@ -179,6 +183,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
 
     func resetTapped() {
         engine.reset()
+        result = nil
         audioCoordinator.reset()
         clearSavedState()
         repCount = 0
@@ -297,12 +302,29 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
     }
 
     // MARK: - Round Tracking Helpers
-    private func completeFinalRound() {
-        guard state == .running || state == .finished else { return }
-        roundTracker.completeFinalRound(currentElapsed: engine.getCurrentElapsed(), currentSet: currentSet)
-    }
+    private func finalizeWorkout(_ completion: TimerEngine.Completion, wasResting: Bool) {
+        guard result == nil else { return }
 
-    private func saveWorkoutWithRounds(wasCompleted: Bool, persistence: PersistenceController = .shared) {
+        let wasCompleted = completion == .completed
+        if wasCompleted, let finalSet = engine.setDurations.last {
+            roundTracker.completeFinalRound(currentElapsed: finalSet.workingTime, currentSet: currentSet)
+        } else if !wasResting {
+            roundTracker.saveCurrentSetRounds(currentSet: currentSet)
+        }
+
+        let summary = WorkoutSummaryData(
+            id: workoutState.id,
+            configuration: configuration,
+            duration: getTotalDuration(),
+            repCount: repCount,
+            roundCount: roundCount,
+            wasCompleted: wasCompleted,
+            roundSplits: allRounds.map { rounds in
+                rounds.map { RoundSplitDisplay(roundNumber: $0.roundNumber, splitTime: $0.splitTime) }
+            },
+            setDurations: getSetDurations(),
+            timestamp: workoutState.startTimestamp
+        )
         let roundSplitsForPersistence: [[PersistenceController.RoundSplitInfo]] = roundTracker.allRoundSplits.map { setRounds in
             setRounds.map { roundData in
                 PersistenceController.RoundSplitInfo(
@@ -314,11 +336,14 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             }
         }
 
+        workoutState.elapsedSeconds = summary.duration
         persistence.saveWorkout(
             workoutState,
-            wasCompleted: wasCompleted,
+            wasCompleted: summary.wasCompleted,
             roundSplits: roundSplitsForPersistence
         )
+        clearSavedState()
+        result = summary
     }
 
     // MARK: - Timer Engine Delegate
@@ -434,13 +459,8 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
             saveState()
         }
 
-        if newState == .finished {
-            if !wasResting {
-                completeFinalRound()
-            }
-            workoutState.elapsedSeconds = engine.getCurrentElapsed()
-            saveWorkoutWithRounds(wasCompleted: true)
-            clearSavedState()
+        if newState == .finished, let completion = engine.completion {
+            finalizeWorkout(completion, wasResting: wasResting)
         }
     }
 
