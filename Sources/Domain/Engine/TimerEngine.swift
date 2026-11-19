@@ -64,6 +64,16 @@ public final class TimerEngine {
         self.configuration = configuration
     }
 
+    convenience init(configuration: TimerConfiguration, restoredState: WorkoutState?) {
+        self.init(configuration: configuration)
+        guard let restoredState else { return }
+
+        state = .paused
+        accumulated = restoredState.elapsedSeconds
+        currentSet = restoredState.currentSet
+        currentInterval = restoredState.currentInterval ?? 1
+    }
+
     // MARK: - Cleanup
     deinit {
         // Ensure CADisplayLink is properly invalidated to prevent retain cycles

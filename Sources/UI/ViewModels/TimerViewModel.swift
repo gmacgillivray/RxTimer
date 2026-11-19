@@ -78,7 +78,7 @@ final class TimerViewModel: ObservableObject, TimerEngineDelegate {
         stateManager: WorkoutStateManager = .shared
     ) {
         self.timerConfiguration = configuration
-        self.engine = TimerEngine(configuration: configuration)
+        self.engine = TimerEngine(configuration: configuration, restoredState: restoredState)
         self.audioCoordinator = audioCoordinator
         self.hapticCoordinator = hapticCoordinator
         self.stateManager = stateManager

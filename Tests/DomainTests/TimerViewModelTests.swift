@@ -36,6 +36,43 @@ final class TimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .countdown)
     }
 
+    func testRestoredWorkoutResumesFromSavedElapsedTime() {
+        let configuration = TimerConfiguration(timerType: .forTime, numSets: 2)
+        let savedWorkout = WorkoutState(
+            configuration: configuration,
+            state: .paused,
+            elapsedSeconds: 65,
+            currentSet: 2,
+            roundCount: 1
+        )
+        let restoredViewModel = TimerViewModel(
+            configuration: configuration,
+            restoredState: savedWorkout
+        )
+        defer { restoredViewModel.resetTapped() }
+
+        XCTAssertEqual(restoredViewModel.state, .paused)
+        XCTAssertEqual(restoredViewModel.timeText, "01:05")
+        XCTAssertEqual(restoredViewModel.currentSet, 2)
+        XCTAssertEqual(restoredViewModel.roundCount, 1)
+
+        restoredViewModel.resumeTapped()
+
+        guard restoredViewModel.state == .running else {
+            XCTFail("Expected Resume to enter running state, got \(restoredViewModel.state)")
+            return
+        }
+        XCTAssertEqual(restoredViewModel.currentSet, 2)
+        XCTAssertEqual(restoredViewModel.roundCount, 1)
+        let clockAdvanced = expectation(description: "Clock advances past the saved time")
+        let observation = restoredViewModel.$timeText
+            .filter { $0 == "01:06" }
+            .prefix(1)
+            .sink { _ in clockAdvanced.fulfill() }
+        defer { observation.cancel() }
+        wait(for: [clockAdvanced], timeout: 3)
+    }
+
     func testRoundCounting() {
         viewModel.startTapped()
         viewModel.skipCountdown() // Skip countdown to get to running
