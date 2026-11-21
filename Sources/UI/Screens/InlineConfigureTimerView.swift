@@ -180,7 +180,7 @@ struct InlineConfigureTimerView: View {
                     )
                 )
                 
-                if let total = configuration.totalDurationSeconds {
+                if let total = configuration.plannedWorkoutDurationSeconds {
                     Divider()
                     HStack {
                         Text("Total Workout Time")

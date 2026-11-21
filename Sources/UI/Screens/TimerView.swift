@@ -287,10 +287,10 @@ struct TimerView: View {
             // Set indicator
             if viewModel.numSets > 1 {
                 VStack(spacing: 8) {
-                    Text("Completed Set \(viewModel.currentSet - 1)")
+                    Text("Completed Set \(viewModel.currentSet)")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
-                    Text("Next: Set \(viewModel.currentSet) of \(viewModel.numSets)")
+                    Text("Next: Set \(viewModel.currentSet + 1) of \(viewModel.numSets)")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                 }
