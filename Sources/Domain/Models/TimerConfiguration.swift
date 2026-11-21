@@ -47,6 +47,11 @@ public struct TimerConfiguration: Codable, Equatable {
             return intervals * intervalDuration
         }
     }
+
+    var plannedWorkoutDurationSeconds: Int? {
+        guard let workPerSet = totalDurationSeconds else { return nil }
+        return workPerSet * numSets + (restDurationSeconds ?? 0) * (numSets - 1)
+    }
 }
 
 // MARK: - Configuration Defaults
