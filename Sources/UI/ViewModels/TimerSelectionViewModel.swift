@@ -26,7 +26,15 @@ final class LastWorkoutStore: ObservableObject {
 
     func startLastWorkout() -> TimerViewModel? {
         guard let configuration else { return nil }
-        let timer = TimerViewModel(configuration: configuration, stateManager: stateManager)
+        return startWorkout(configuration)
+    }
+
+    func startWorkout(_ configuration: TimerConfiguration) -> TimerViewModel {
+        let timer = TimerViewModel(
+            configuration: configuration,
+            stateManager: stateManager,
+            onWorkoutStarted: recordStartedWorkout
+        )
         timer.startTapped()
         return timer
     }

@@ -24,7 +24,8 @@ struct MainContainerView: View {
                 pendingWorkoutSummary = summary
             },
             onStartWorkout: { config in
-                navState = .activeWorkout(config, restoredState: nil)
+                let timer = lastWorkout.startWorkout(config)
+                navState = .activeWorkout(config, restoredState: nil, startedTimer: timer)
             },
             quickStartConfiguration: lastWorkout.configuration,
             onQuickStart: startLastWorkout
