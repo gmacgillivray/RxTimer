@@ -111,6 +111,15 @@ struct TimerView: View {
                 .accessibilityIdentifier("endWorkoutEarly")
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if viewModel.state == .running {
+                timerAction("Pause", icon: "pause.fill", accessibilityLabel: "Pause workout", action: viewModel.pauseTapped)
+                    .padding(.trailing, 12)
+            } else if viewModel.state == .paused {
+                timerAction("Resume", icon: "play.fill", accessibilityLabel: "Resume workout", action: viewModel.resumeTapped)
+                    .padding(.trailing, 12)
+            }
+        }
         .onChange(of: viewModel.state) { newState in
             let isActive = newState != .idle && newState != .finished
             onWorkoutStateChange?(isActive)
@@ -694,7 +703,6 @@ struct TimerView: View {
         )
         .scaleEffect(timeDisplayPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: timeDisplayPressed)
-        .accessibilityHint("Double tap to Start, Pause or Resume timer")
     }
 
     // MARK: - Secondary Info View
@@ -887,6 +895,16 @@ struct TimerView: View {
         }
         .frame(maxWidth: buttonContainerMaxWidth)
         .padding(.horizontal)
+    }
+
+    private func timerAction(_ title: String, icon: String, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .frame(minWidth: 120, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     /// Whether to show the slide-to-finish slider (final set while running)
